@@ -2,7 +2,7 @@
 
 UnityArtistCLI は、Unity Editor の世界観・雰囲気・LookDev・Lighting・Environment・Camera・Cinematic・Timeline・Visual Evaluation/Refine を、公式 Unity CLI と Unity Pipeline 経由で実行する CLI-first 製品です。
 
-製品名は `UnityArtistCLI`、実行ファイルは `unity-artist`、UX は `unity artist <command>`、UPM Package は `com.darumappap.unity-artist`、C# namespace は `DarumaPPAP.UnityArtist` です。
+製品名は `UnityArtistCLI`、実行ファイルは `unity-artist`、UX は `unity artist <command>`、UPM Package は `com.darumappap.unity-artist`、C# namespace は `UnityArtist` です。
 
 ## Current contract
 
@@ -72,7 +72,7 @@ UnityArtistCLI does not expose generic GameObject/hierarchy CRUD, compile/test/b
 | Unity 6.x+ | URP | primary | official Unity CLI + Unity Pipeline |
 | Unity 6.x+ | HDRP | primary | official Unity CLI + Unity Pipeline |
 
-2022.3 URP/HDRP、Unity 2023、URP 14–16 は正式対応外です。2022.3 Built-in も最初に公式 CLI + Pipeline の実接続を検証します。今回のホストでは全列挙版が Unity 6.0 要件で具体的に失敗したため、その証跡後に限り、固定 `unity run` バッチ入口 `DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch` を限定フォールバックとして使用します。これは shared `ArtistSession` を再利用し、動的コード・MCP・汎用CRUD・自動保存を許可しません。
+2022.3 URP/HDRP、Unity 2023、URP 14–16 は正式対応外です。2022.3 Built-in も最初に公式 CLI + Pipeline の実接続を検証します。今回のホストでは全列挙版が Unity 6.0 要件で具体的に失敗したため、その証跡後に限り、固定 `unity run` バッチ入口 `UnityArtist.UnityArtistBatchCommands.Dispatch` を限定フォールバックとして使用します。これは shared `ArtistSession` を再利用し、動的コード・MCP・汎用CRUD・自動保存を許可しません。
 
 ## Verification
 

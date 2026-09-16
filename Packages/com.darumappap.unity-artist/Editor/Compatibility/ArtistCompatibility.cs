@@ -2,7 +2,7 @@
 
 using System;
 
-namespace DarumaPPAP.UnityArtist
+namespace UnityArtist
 {
 	public enum E_ARTIST_API_PATCH_BUCKET
 	{

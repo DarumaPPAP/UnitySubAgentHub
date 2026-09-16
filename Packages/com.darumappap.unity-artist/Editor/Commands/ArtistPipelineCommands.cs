@@ -14,7 +14,7 @@ using UnityEngine.Playables;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-namespace DarumaPPAP.UnityArtist
+namespace UnityArtist
 {
 	[Serializable]
 	public sealed class ArtistIntent
@@ -30,6 +30,9 @@ namespace DarumaPPAP.UnityArtist
 		public float lightIntensity;
 		public bool setCameraFieldOfView;
 		public float cameraFieldOfView;
+		public string targetGuid;
+		public float cameraFovMinimum;
+		public float cameraFovMaximum;
 		public string captureCameraName;
 		public string timelineAssetName;
 		public string[] requestedChannels;
@@ -70,6 +73,8 @@ namespace DarumaPPAP.UnityArtist
 		public string name;
 		public string scenePath;
 		public string hierarchyPath;
+		public string globalObjectId;
+		public float fieldOfView;
 		public bool enabled;
 	}
 
@@ -558,16 +563,39 @@ namespace DarumaPPAP.UnityArtist
 			}
 			if (intent.setCameraFieldOfView)
 			{
-				Camera camera = FindCamera(intent.targetName);
+				Camera camera = FindCamera(intent.targetName, intent.targetGuid);
 				if (camera == null)
 				{
 					Error(result, "TARGET_NOT_FOUND", "An exact camera target is required for cameraFieldOfView.");
 					return false;
 				}
-				Undo.RecordObject(camera, "UnityArtistCLI Camera Composition");
-				float before = camera.fieldOfView;
-				camera.fieldOfView = Mathf.Clamp(intent.cameraFieldOfView, 1.0f, 179.0f);
-				result.exactDiff.Add(new ArtistChange { target = camera.name, property = "fieldOfView", before = before.ToString("0.####"), after = camera.fieldOfView.ToString("0.####") });
+				float minimum = string.Equals(intent.workflow, "camera_fov_reference", StringComparison.Ordinal) ? intent.cameraFovMinimum : 1.0f;
+				float maximum = string.Equals(intent.workflow, "camera_fov_reference", StringComparison.Ordinal) ? intent.cameraFovMaximum : 179.0f;
+				bool referenceWorkflow = string.Equals(intent.workflow, "camera_fov_reference", StringComparison.Ordinal);
+				if (referenceWorkflow && (minimum <= 0.0f || maximum <= 0.0f))
+				{
+					minimum = 35.0f;
+					maximum = 50.0f;
+				}
+				if (referenceWorkflow && (minimum != 35.0f || maximum != 50.0f))
+				{
+					Error(result, "CAMERA_FOV_OUTSIDE_APPROVAL", "camera_fov_reference requires the canonical 35..50 approval envelope.");
+					return false;
+				}
+				float before;
+				float after;
+				string fovError;
+				bool applied;
+				if (referenceWorkflow)
+					applied = UnityArtist.CameraFovWorkflowAdapter.TryApply(camera, intent.targetGuid, UnityArtist.CameraFovWorkflowAdapter.ComponentType, UnityArtist.CameraFovWorkflowAdapter.PropertyPath, intent.cameraFieldOfView, minimum, maximum, out before, out after, out fovError);
+				else
+					applied = UnityArtist.CameraFovWorkflowAdapter.TryApply(camera, intent.cameraFieldOfView, minimum, maximum, out before, out after, out fovError);
+				if (!applied)
+				{
+					Error(result, "CAMERA_FOV_OUTSIDE_APPROVAL", fovError);
+					return false;
+				}
+				result.exactDiff.Add(new ArtistChange { target = referenceWorkflow ? intent.targetGuid : camera.name, property = UnityArtist.CameraFovWorkflowAdapter.PropertyPath, before = before.ToString("0.####"), after = after.ToString("0.####") });
 			}
 			return result.errors.Count == 0;
 		}
@@ -987,7 +1015,36 @@ namespace DarumaPPAP.UnityArtist
 				result.evidence.Add("urp_volume_plan");
 			}
 			if (intent.setLightIntensity) result.exactDiff.Add(new ArtistChange { target = intent.targetName ?? string.Empty, property = "intensity", before = "observed", after = Mathf.Max(0.0f, intent.lightIntensity).ToString("0.####") });
-			if (intent.setCameraFieldOfView) result.exactDiff.Add(new ArtistChange { target = intent.targetName ?? string.Empty, property = "fieldOfView", before = "observed", after = Mathf.Clamp(intent.cameraFieldOfView, 1.0f, 179.0f).ToString("0.####") });
+			if (intent.setCameraFieldOfView)
+			{
+				Camera camera = FindCamera(intent.targetName, intent.targetGuid);
+				if (camera == null)
+				{
+					Error(result, "TARGET_NOT_FOUND", "An exact camera target is required for cameraFieldOfView.");
+					return false;
+				}
+				bool referenceWorkflow = string.Equals(intent.workflow, "camera_fov_reference", StringComparison.Ordinal);
+				float minimum = referenceWorkflow ? intent.cameraFovMinimum : 1.0f;
+				float maximum = referenceWorkflow ? intent.cameraFovMaximum : 179.0f;
+				if (referenceWorkflow && (minimum <= 0.0f || maximum <= 0.0f)) { minimum = 35.0f; maximum = 50.0f; }
+				if (referenceWorkflow && (minimum != 35.0f || maximum != 50.0f))
+				{
+					Error(result, "CAMERA_FOV_OUTSIDE_APPROVAL", "camera_fov_reference requires the canonical 35..50 approval envelope.");
+					return false;
+				}
+				if (referenceWorkflow && !UnityArtist.CameraFovWorkflowAdapter.Validate(camera, intent.targetGuid, UnityArtist.CameraFovWorkflowAdapter.ComponentType, UnityArtist.CameraFovWorkflowAdapter.PropertyPath, minimum, maximum, out string bindingError))
+				{
+					Error(result, "CAMERA_FOV_TARGET_INVALID", bindingError);
+					return false;
+				}
+				if (float.IsNaN(intent.cameraFieldOfView) || float.IsInfinity(intent.cameraFieldOfView) || intent.cameraFieldOfView < minimum || intent.cameraFieldOfView > maximum)
+				{
+					Error(result, "CAMERA_FOV_OUTSIDE_APPROVAL", "Camera FOV is outside the approved parameter envelope.");
+					return false;
+				}
+				result.exactDiff.Add(new ArtistChange { target = referenceWorkflow ? intent.targetGuid : camera.name, property = UnityArtist.CameraFovWorkflowAdapter.PropertyPath, before = camera.fieldOfView.ToString("0.####"), after = intent.cameraFieldOfView.ToString("0.####") });
+				result.evidence.Add("camera_binding");
+			}
 			return true;
 		}
 
@@ -1302,7 +1359,10 @@ namespace DarumaPPAP.UnityArtist
 
 		private static ArtistTarget Target(string kind, Component component, bool enabled)
 		{
-			return new ArtistTarget { kind = kind, name = component.name, scenePath = component.gameObject.scene.path, hierarchyPath = HierarchyPath(component.transform), enabled = enabled };
+			ArtistTarget target = new ArtistTarget { kind = kind, name = component.name, scenePath = component.gameObject.scene.path, hierarchyPath = HierarchyPath(component.transform), enabled = enabled };
+			try { target.globalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(component).ToString(); } catch (Exception) { target.globalObjectId = string.Empty; }
+			if (component is Camera camera) target.fieldOfView = camera.fieldOfView;
+			return target;
 		}
 
 		private static string HierarchyPath(Transform transform)
@@ -1315,9 +1375,19 @@ namespace DarumaPPAP.UnityArtist
 			return SceneObjects<Light>().FirstOrDefault(value => string.Equals(value.name, name, StringComparison.Ordinal));
 		}
 
-		private static Camera FindCamera(string name)
+		private static Camera FindCamera(string name, string globalObjectId = null)
 		{
 			IEnumerable<Camera> cameras = SceneObjects<Camera>();
+			if (!string.IsNullOrWhiteSpace(globalObjectId))
+			{
+				Camera exact = cameras.FirstOrDefault(value =>
+				{
+					try { return string.Equals(GlobalObjectId.GetGlobalObjectIdSlow(value).ToString(), globalObjectId, StringComparison.Ordinal); } catch (Exception) { return false; }
+				});
+				if (exact == null) return null;
+				if (!string.IsNullOrWhiteSpace(name) && !string.Equals(exact.name, name, StringComparison.Ordinal)) return null;
+				return exact;
+			}
 			if (!string.IsNullOrWhiteSpace(name)) return cameras.FirstOrDefault(value => string.Equals(value.name, name, StringComparison.Ordinal));
 			return cameras.FirstOrDefault(value => value.CompareTag("MainCamera")) ?? cameras.FirstOrDefault();
 		}

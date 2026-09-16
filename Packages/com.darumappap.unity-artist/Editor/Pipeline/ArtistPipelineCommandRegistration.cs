@@ -3,7 +3,7 @@
 using UnityEngine;
 using Unity.Pipeline.Commands;
 
-namespace DarumaPPAP.UnityArtist
+namespace UnityArtist
 {
 	public static class ArtistPipelineCommands
 	{

@@ -1,6 +1,6 @@
 {
   "name": "DarumaPPAP.UnityArtist.Editor",
-  "rootNamespace": "DarumaPPAP.UnityArtist",
+  "rootNamespace": "UnityArtist",
   "references": [],
   "includePlatforms": [
     "Editor"

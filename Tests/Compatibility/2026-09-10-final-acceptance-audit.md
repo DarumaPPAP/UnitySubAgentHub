@@ -43,7 +43,7 @@ exhaustive evidence lists `0.6.0-exp.1`, `0.5.0-exp.1`, `0.4.0-exp.1`,
 `0.3.1-exp.1`, `0.3.0-exp.1`, and `0.2.0-exp.2`; all failed with the concrete
 message that the Pipeline package requires Unity 6.0 or later. The fallback is
 restricted to Unity 2022.3 LTS + Built-in and the fixed
-`DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch` method.
+`UnityArtist.UnityArtistBatchCommands.Dispatch` method.
 
 The disposable fixture passed compile-error inspection, inspect → plan →
 preview, the no-token approval rejection, exact-diff apply with Undo and no

@@ -1,6 +1,6 @@
 {
   "name": "DarumaPPAP.UnityArtist.Pipeline.Editor",
-  "rootNamespace": "DarumaPPAP.UnityArtist",
+  "rootNamespace": "UnityArtist",
   "references": [
     "DarumaPPAP.UnityArtist.Editor",
     "Unity.Pipeline"

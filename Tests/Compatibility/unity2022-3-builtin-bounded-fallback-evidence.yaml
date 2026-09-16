@@ -11,8 +11,8 @@ support:
   transport: official_unity_cli_bounded_batch_fallback
 editor:
   official_unity_cli: "1.0.0-beta.8"
-  fallback_invoked_by: "unity run <project> --editor-version 2022.3.22f1 -- -executeMethod DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch"
-  fallback_entrypoint: DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch
+  fallback_invoked_by: "unity run <project> --editor-version 2022.3.22f1 -- -executeMethod UnityArtist.UnityArtistBatchCommands.Dispatch"
+  fallback_entrypoint: UnityArtist.UnityArtistBatchCommands.Dispatch
   scene_path: Assets/Scenes/ArtistVerification.unity
   scene_selection: "exact --scene-path or exactly one enabled EditorBuildSettings scene"
   compile_error_count: 0
@@ -30,7 +30,7 @@ fallback:
   transport: official_unity_cli_bounded_batch_fallback
   product_boundary: "Unity 2022.3 LTS + Built-in only"
   allowed_commands: [inspect, plan, preview, apply, capture, evaluate, refine, cinematic, history]
-  fixed_editor_method: DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch
+  fixed_editor_method: UnityArtist.UnityArtistBatchCommands.Dispatch
   request_channel: "base64 JSON in UNITY_ARTIST_BATCH_REQUEST"
   response_channel: "single JSON file in UNITY_ARTIST_BATCH_RESPONSE"
   state_path: Library/UnityArtist/BatchSession.json

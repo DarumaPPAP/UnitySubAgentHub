@@ -4,7 +4,7 @@
 
 UnityArtistCLI is the Artist specialist Provider. It handles visual intent inspection and planning, mood/lookdev, lighting, environment, sky/fog/reflection/GI, camera/depth/continuity, Cinemachine/TL cinematic planning, capture, human evaluation, and linked refinement. It does not become a general Unity editor API.
 
-The host executable is `unity-artist`; the command UX is `unity artist`; the UPM package is `com.darumappap.unity-artist`; the C# namespace is `DarumaPPAP.UnityArtist`.
+The host executable is `unity-artist`; the command UX is `unity artist`; the UPM package is `com.darumappap.unity-artist`; the C# namespace is `UnityArtist`.
 
 ## Transport and layering
 
@@ -22,7 +22,7 @@ UnityAgent CapabilityRequest
 
 The adapter accepts typed argv only, always supplies an explicit project path, uses bounded cancellation, parses JSON only, and uses an allowlisted command map. It never calls arbitrary eval or chooses aesthetic intent.
 
-For Unity 2022.3 LTS + Built-in, the host always probes the Official Unity CLI/Pipeline install first. Only the recorded Unity 6.0-or-later Pipeline compatibility failure selects the bounded `official_unity_cli_bounded_batch_fallback`: `unity run` invokes the fixed `DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch` method with base64-encoded structured JSON and a single JSON response file. The bridge reuses `ArtistSession`, allowlists the Artist commands, loads an exact scene, and does not auto-save or persist approval tokens. It is not a second Player Framework, MCP transport, dynamic-code executor, or generic Unity CRUD surface.
+For Unity 2022.3 LTS + Built-in, the host always probes the Official Unity CLI/Pipeline install first. Only the recorded Unity 6.0-or-later Pipeline compatibility failure selects the bounded `official_unity_cli_bounded_batch_fallback`: `unity run` invokes the fixed `UnityArtist.UnityArtistBatchCommands.Dispatch` method with base64-encoded structured JSON and a single JSON response file. The bridge reuses `ArtistSession`, allowlists the Artist commands, loads an exact scene, and does not auto-save or persist approval tokens. It is not a second Player Framework, MCP transport, dynamic-code executor, or generic Unity CRUD surface.
 
 ## Command contract
 

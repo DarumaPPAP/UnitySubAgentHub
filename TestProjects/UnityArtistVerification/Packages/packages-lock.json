@@ -4,9 +4,7 @@
       "version": "file:../../../Packages/com.darumappap.unity-artist",
       "depth": 0,
       "source": "local",
-      "dependencies": {
-        "com.unity.pipeline": "0.3.0-exp.1"
-      }
+      "dependencies": {}
     },
     "com.unity.ext.nunit": {
       "version": "2.1.0",
