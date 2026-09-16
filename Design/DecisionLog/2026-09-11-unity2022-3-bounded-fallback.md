@@ -22,7 +22,7 @@ requires Unity 6.0 or later. The result is recorded in
 ## Bounded implementation
 
 The host invokes `unity run` with a fixed
-`DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch` entrypoint. The
+`UnityArtist.UnityArtistBatchCommands.Dispatch` entrypoint. The
 request is a base64-encoded structured JSON DTO in
 `UNITY_ARTIST_BATCH_REQUEST`; the provider returns one JSON response file in
 `UNITY_ARTIST_BATCH_RESPONSE`. The bridge is restricted to Unity 2022.3

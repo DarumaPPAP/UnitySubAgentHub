@@ -57,7 +57,7 @@ def main() -> int:
         fail("the bounded non-MCP fallback must be explicitly selected only after the concrete gate failure")
     if fallback.get("transport") != "official_unity_cli_bounded_batch_fallback":
         fail("the selected fallback transport is not explicit")
-    if fallback.get("entrypoint") != "DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch":
+    if fallback.get("entrypoint") != "UnityArtist.UnityArtistBatchCommands.Dispatch":
         fail("the selected fallback entrypoint is not fixed")
     if data.get("terminal_state") != "verified_for_fixture":
         fail("the 2022.3 bounded fallback fixture must be verified")

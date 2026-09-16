@@ -44,7 +44,7 @@ official_first_candidate:
     status: blocked_by_pipeline_gate
     reason: "The official Pipeline install gate failed before a connected Pipeline instance could exist."
   bounded_fallback_command_discovery:
-    command: "unity run <2022.3 Built-in fixture> --editor-version 2022.3.22f1 -- -executeMethod DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch"
+    command: "unity run <2022.3 Built-in fixture> --editor-version 2022.3.22f1 -- -executeMethod UnityArtist.UnityArtistBatchCommands.Dispatch"
     status: passed
     evidence: Tests/Compatibility/unity2022-3-builtin-bounded-fallback-evidence.yaml
 artist_plugin:
@@ -73,7 +73,7 @@ fallback_evaluation:
   status: verified_bounded_non_mcp
   transport: official_unity_cli_bounded_batch_fallback
   rejected_candidate_reason: "The candidate's documented execute-dynamic-code surface would violate UnityArtistCLI's no-arbitrary-eval Artist contract."
-  entrypoint: DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch
+  entrypoint: UnityArtist.UnityArtistBatchCommands.Dispatch
   evidence: Tests/Compatibility/unity2022-3-builtin-bounded-fallback-evidence.yaml
   selection_condition: "Only after the concrete Official Unity CLI/Pipeline compatibility gate failure above."
 decision: "Keep Official Unity CLI + Unity Pipeline as the formal primary transport. For the observed 2022.3 gate failure only, use the fixed Official Unity CLI batch entrypoint with the shared ArtistSession safety contract; reject dynamic-code and MCP fallbacks."

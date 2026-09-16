@@ -40,7 +40,7 @@ def main() -> int:
     fallback = data.get("fallback", {})
     if fallback.get("selected") is not True or fallback.get("status") != "verified_bounded_non_mcp":
         fail("bounded non-MCP fallback was not verified")
-    if fallback.get("fixed_editor_method") != "DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch":
+    if fallback.get("fixed_editor_method") != "UnityArtist.UnityArtistBatchCommands.Dispatch":
         fail("fallback entrypoint is not fixed")
     forbidden = set(fallback.get("forbidden", []))
     if not {"dynamic_code_execution", "raw_yaml_mutation", "mcp_transport", "automatic_scene_save"}.issubset(forbidden):

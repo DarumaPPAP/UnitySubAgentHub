@@ -2,7 +2,7 @@
 
 using NUnit.Framework;
 
-namespace DarumaPPAP.UnityArtist.Tests
+namespace UnityArtist.Tests
 {
 	public sealed class ArtistCompatibilityTests
 	{

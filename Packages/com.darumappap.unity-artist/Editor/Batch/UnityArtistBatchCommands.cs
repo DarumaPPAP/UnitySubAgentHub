@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-namespace DarumaPPAP.UnityArtist
+namespace UnityArtist
 {
 	[Serializable]
 	internal sealed class BatchRequest

@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace DarumaPPAP.UnityArtist.Cli;
+namespace UnityArtist.Cli;
 
 internal static class Program
 {
@@ -130,7 +130,7 @@ internal static class ArtistCli
         {
             transport = "official_unity_cli_bounded_batch_fallback",
             policy = "concrete_cli_pipeline_gate_failure_only",
-            entrypoint = "DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch",
+            entrypoint = "UnityArtist.UnityArtistBatchCommands.Dispatch",
             scope = "Unity 2022.3 LTS + Built-in only"
         },
         artistOnlySurface = new[]
@@ -405,7 +405,7 @@ internal static class ArtistCli
             "-screen-width", "1920",
             "-screen-height", "1080",
             "-screen-fullscreen", "0",
-            "-executeMethod", "DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch"
+            "-executeMethod", "UnityArtist.UnityArtistBatchCommands.Dispatch"
         };
 
         try

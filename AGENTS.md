@@ -30,7 +30,7 @@ Project targeting must remain explicit, but production documentation and committ
 
 The official Unity CLI is the first transport for every supported matrix row, including Unity 2022.3 Built-in. The Pipeline package must be installed and reachable before editor command execution. A fallback is permitted only after a concrete compatibility Gate Failure is recorded with the Unity version, render pipeline, CLI/Pipeline observation, and failure class.
 
-The bounded 2022.3 fallback uses `unity run` with the fixed `DarumaPPAP.UnityArtist.UnityArtistBatchCommands.Dispatch` entrypoint and the shared `ArtistSession`; it accepts structured JSON only, rejects dynamic code/raw YAML/MCP/generic CRUD, reopens an exact scene, persists only redacted plan/capture/history metadata, and never auto-saves an Artist mutation. It is not a second Player Framework or a generic backend.
+The bounded 2022.3 fallback uses `unity run` with the fixed `UnityArtist.UnityArtistBatchCommands.Dispatch` entrypoint and the shared `ArtistSession`; it accepts structured JSON only, rejects dynamic code/raw YAML/MCP/generic CRUD, reopens an exact scene, persists only redacted plan/capture/history metadata, and never auto-saves an Artist mutation. It is not a second Player Framework or a generic backend.
 
 Formal support is limited to:
 
