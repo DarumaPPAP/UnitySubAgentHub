@@ -1,23 +1,30 @@
-# UnityArtistCLI
+# ArtistSubAgent
 
-UnityArtistCLI は、Unity Editor の世界観・雰囲気・LookDev・Lighting・Environment・Camera・Cinematic・Timeline・Visual Evaluation/Refine を、公式 Unity CLI と Unity Pipeline 経由で実行する CLI-first 製品です。
+ArtistSubAgent は、UnityAgent からのみ委譲される Visual Art / LookDev / Lighting / Environment / Camera / Cinematic / Timeline 専門SubAgentです。
 
-製品名は `UnityArtistCLI`、実行ファイルは `unity-artist`、UX は `unity artist <command>`、UPM Package は `com.darumappap.unity-artist`、C# namespace は `UnityArtist` です。
+製品・専門Agentとしての正本名は `ArtistSubAgent`、runtime id は `artist_subagent` です。既存の `unity-artist` executable、`unity artist <command>` UX、`com.darumappap.unity-artist` UPM Package、`UnityArtist` namespace は **実行Backendの互換Surface** として維持します。
 
 ## Current contract
 
 ```text
 UnityAgent (Architect / Commander / Loop Owner)
   CapabilityRequest → Policy / Approval / Scope
-  → Provider Registry → Resolver → Dispatcher
-  → unity_artist_cli Provider Adapter
-  → UnityArtistCLI → official Unity CLI / Unity Pipeline
+  → ArtistSubAgent eligibility / plan
+  → Backend Provider Registry → Resolver → Dispatcher
+  → unity_artist_cli backend
+  → official Unity CLI / Unity Pipeline
   → ProviderResult → Evidence Normalizer → Persistence
 ```
 
-UnityAgent に別の Player Framework や Registry は追加しません。Player は Provider の概念上の呼称であり、実装上の canonical name は `unity_artist_cli` です。
+ArtistSubAgentは第二のControl PlaneやProvider Registryを持ちません。`artist_subagent` が専門Agentのcanonical idであり、`unity_artist_cli` は現在のBackend Provider互換idです。
 
-## Commands
+## Activation
+
+ArtistSubAgentはoptionalです。カタログへ登録されているだけでは利用可能になりません。Backend availability、Project binding、UPM Package、Pipeline reachabilityが観測できた場合だけUnityAgentの候補になります。未導入・未Bind・非互換・unknownはResolverから除外し、Capability解決を理由に自動インストールしません。
+
+ArtistSubAgentを導入する操作は、ユーザーが明示的にSetupを要求した場合だけ実行します。
+
+## Backend commands
 
 ```text
 unity artist help
@@ -40,28 +47,28 @@ Project paths are explicit for safe Editor targeting, but they do not need to be
 .\scripts\verify-external-cli.ps1 -ProjectPath .\TestProjects\UnityArtistVerification-URP
 
 # From a real project root, no absolute user path is required.
-.\path\to\UnityArtistCLI\scripts\verify-external-cli.ps1 -ProjectPath .
+.\path\to\UnitySubAgentHub\scripts\verify-external-cli.ps1 -ProjectPath .
 ```
 
 The script accepts `UNITY_ARTIST_PROJECT_PATH` and `UNITY_ARTIST_CLI_PATH` when a caller needs configuration outside the current directory. It resolves those values only at the process boundary; committed commands and evidence use logical fixture paths, not a developer's home directory.
 
-The Windows installer defaults to `%LOCALAPPDATA%\UnityArtistCLI\Beta`; the Unix installer defaults to `~/.local/lib/unity-artist/Beta`. Override the destination explicitly with `-InstallRoot` on PowerShell or the first argument on Unix when a different installation scope is required. The current product, package, and plugin version is `0.0.1-beta`; `Beta` is the installation channel directory.
+The Windows installer defaults to `%LOCALAPPDATA%\UnityArtistCLI\Beta`; the Unix installer defaults to `~/.local/lib/unity-artist/Beta`. Override the destination explicitly with `-InstallRoot` on PowerShell or the first argument on Unix when a different installation scope is required. The current ArtistSubAgent/backend release version is `0.0.1-beta`; `Beta` is the backend installation channel directory.
 
 For a Windows machine without a repository checkout, the published beta can be installed with a single PowerShell command:
 
 ```powershell
-irm https://raw.githubusercontent.com/DarumaPPAP/UnityArtistCLI/main/scripts/install-remote.ps1 | iex
+irm https://raw.githubusercontent.com/DarumaPPAP/UnitySubAgentHub/main/scripts/install-remote.ps1 | iex
 ```
 
 This downloads the self-contained Windows host archive from the `v0.0.1-beta` GitHub Release, verifies its SHA-256 sidecar, installs it into `%LOCALAPPDATA%\UnityArtistCLI\Beta`, and verifies `unity-artist version`. The bootstrap does not require the .NET SDK/runtime, a Unity project, administrator privileges, or a source checkout. To pin the bootstrap itself to a release ref, use:
 
 ```powershell
-irm https://raw.githubusercontent.com/DarumaPPAP/UnityArtistCLI/v0.0.1-beta/scripts/install-remote.ps1 | iex
+irm https://raw.githubusercontent.com/DarumaPPAP/UnitySubAgentHub/v0.0.1-beta/scripts/install-remote.ps1 | iex
 ```
 
 Set `UNITY_ARTIST_VERSION` or `UNITY_ARTIST_INSTALL_ROOT` before invoking the command when a different release or destination is required. The remote command becomes usable after the human-gated release workflow has published the matching host archive; the local checkout installer remains `.\scripts\install.ps1`.
 
-UnityArtistCLI does not expose generic GameObject/hierarchy CRUD, compile/test/build/play/stop/log operations, arbitrary evaluation, generic Addressables/UI/Audio control, or a second Control Plane. Those concerns stay with the official Unity CLI or the existing UnityAgent Provider chain.
+ArtistSubAgent does not expose generic GameObject/hierarchy CRUD, compile/test/build/play/stop/log operations, arbitrary evaluation, generic Addressables/UI/Audio control, or a second Control Plane. Those concerns stay with the official Unity CLI or the existing UnityAgent Provider chain.
 
 ## Release matrix
 
@@ -103,10 +110,10 @@ Packages/com.darumappap.unity-artist/        # UnityArtist Editor API + optional
 Legacy/MyUnityMCP-1.1.1/Package/              # legacy package source, not production
 Tests/Compatibility/                         # matrix and compatibility gates
 Tests/Release/                               # production contract validators
-.agents/plugins/unity-artist/                # skill-only Codex plugin
+.agents/skills/artist-subagent-*/            # repo-scoped specialist workflows
 Legacy/MyUnityMCP-1.1.1/                     # immutable migration reference
 ```
 
-The UnityAgent repository owns the shared marketplace authority and its `unity-agent` plugin. The UnityArtistCLI repository owns only the `unity-artist` plugin.
+UnityAgent owns the Codex marketplace and the only user-facing `unity-agent` plugin. ArtistSubAgent is not installed as a separate Codex plugin; this repository keeps only repo-scoped specialist workflows and backend implementation.
 
 MIT License. See [LICENSE](LICENSE).
