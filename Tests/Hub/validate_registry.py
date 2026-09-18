@@ -212,7 +212,7 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
 
     if manifest.get("lifecycle") not in LIFECYCLES:
         errors.append(f"{path}: lifecycle must be active, deprecated, retired, or revoked")
-    installation = manifest.get("installation")    
+    installation = manifest.get("installation")
     if not isinstance(installation, dict) or installation.get("mode") != "optional":
         errors.append(f"{path}: every SubAgent must be optional")
     if not isinstance(installation, dict) or installation.get("required") is not False:
@@ -268,8 +268,11 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
         else:
             dependency_ids.add(dependency_id)
         gate = dependency.get("eligibility_gate")
-        if dependency.get("required") is True and gate and isinstance(gates, list) and gate not in gates:
-            errors.append(f"{path}: required dependency gate {gate!r} must be checked before resolution")
+        if dependency.get("required") is True:
+            if not isinstance(gate, str) or not gate:
+                errors.append(f"{path}: dependencies[{index}].eligibility_gate is required for required dependencies")
+            elif isinstance(gates, list) and gate not in gates:
+                errors.append(f"{path}: required dependency gate {gate!r} must be checked before resolution")
 
     backends = manifest.get("backends")
     if not isinstance(backends, list) or not backends:

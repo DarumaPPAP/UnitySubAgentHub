@@ -37,7 +37,7 @@ registered → discovered → installed → compatible → project_bound
 - Manifestが参照する各Contract: Specialist固有の詳細仕様と受け入れ条件
 - `Design/subagent-hub-architecture.md`: HubとUnityAgentの責任境界、Lifecycle、登録手順
 
-現在のProject状態やインストール状況は実行時にUnityAgentが観測します。ManifestやRegistryへ環境固有の状態を記録しません。
+現在のProject状態やインストール状況は実行時にUnityAgentが観測します。ManifestやRegistryへ環境固有の状態を記録しません。現在のUnityAgent ReferenceImplementationは `unity_artist_cli.compatible` の環境事実をまだ出力しないため、この互換性ゲートがunknownの間はArtistSubAgentを候補に含めません。実行時にこの事実が供給されるまで fail-closed のままです。
 
 ## 新しいSubAgentの追加
 
