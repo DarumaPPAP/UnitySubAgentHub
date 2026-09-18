@@ -1,22 +1,29 @@
-schema_version: "2.0"
+schema_version: "2.1"
 kind: production_surface_contract
 authority: current_production
-product: UnityArtistCLI
+product: ArtistSubAgent
+subagent_id: artist_subagent
+backend_id: unity_artist_cli
 release_version: "0.0.1-beta"
-status: cli_and_editor_operational
-package: com.darumappap.unity-artist
-executable: unity-artist
+status: subagent_with_cli_editor_backend
+installation_mode: optional
+auto_install: false
+unavailable_behavior: exclude_from_resolution
+backend_package: com.darumappap.unity-artist
+backend_executable: unity-artist
 transport: official_unity_cli_pipeline
 fallback_transport: official_unity_cli_bounded_batch_fallback
 fallback_policy: concrete_cli_pipeline_gate_failure_only
-command_count: 14
-commands: [help, version, doctor, capabilities, install, inspect, plan, preview, apply, capture, evaluate, refine, cinematic, history]
+backend_command_count: 14
+backend_commands: [help, version, doctor, capabilities, install, inspect, plan, preview, apply, capture, evaluate, refine, cinematic, history]
 artist_specific_capabilities: [visual_art, lookdev, lighting, environment, camera, cinematic, timeline, capture, evaluate, refine]
 generic_operations: delegated_to_official_unity_cli
 mutation_lifecycle: inspect_plan_exact_diff_expected_revision_approval_apply_evidence
 automatic_save: false
 arbitrary_eval: false
-second_player_framework: false
+second_control_plane: false
+second_provider_registry: false
+standalone_codex_plugin: false
 mcp_transport: false
 release_matrix:
   - { unity_version: "2022.3 LTS", render_pipeline: builtin, support_tier: primary, supported: true, transport: official_unity_cli_pipeline }
