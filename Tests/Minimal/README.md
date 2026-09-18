@@ -1,32 +1,27 @@
-# Minimal live smoke test
+# Unity 6 Built-in Minimal Live Smoke
 
-`scripts/run_minimal_live_smoke.py` is the shortest end-to-end check for the
-UnityArtistCLI migration. It targets the disposable Unity 6 Built-in fixture and
-uses only the Official Unity CLI/Pipeline for Editor interaction.
+`scripts/run_minimal_live_smoke.py`は、接続済みUnity 6 Built-in Editorに対するArtist Backendの最短E2E Smokeです。Disposable Fixtureに限定し、一般のProjectでのMutationやHub Snapshot Integrationを検証するものではありません。
 
-The test creates `Assets/MinimalSmoke.unity` with Unity's default Main Camera,
-Directional Light, and one Cube, then verifies:
+## Preparation
 
-1. Artist support is detected through the Official Unity CLI/Pipeline transport.
-2. `artist.plan` and `artist.preview` are read-only and expose an exact diff.
-3. `artist.apply` blocks without an approval token and succeeds with one.
-4. Apply evidence contains mutation, Undo, and explicit no-save facts.
-5. `artist.capture` produces a non-empty, parseable PNG.
-6. `artist.evaluate` and `artist.refine` complete the visual loop.
-7. `artist.history` returns the session evidence.
-
-The Editor must already be connected. Prepare it once from the repository root:
+Repository RootからFixtureにOfficial Unity PipelineをInstallし、Editorを開きます。
 
 ```powershell
 unity pipeline install --project-path .\TestProjects\UnityArtistVerification --proxy-disable
 unity open .\TestProjects\UnityArtistVerification --editor-version 6000.6.0f1 --non-interactive --no-banner --proxy-disable
-```
-
-Then run:
-
-```powershell
 python scripts/run_minimal_live_smoke.py
 ```
 
-This is a smoke test, not release-matrix evidence. The four-row matrix and the
-Unity 2022.3 first-candidate gate remain covered by their dedicated contracts.
+## Checks
+
+SmokeはDefault Main Camera、Directional Light、Cubeだけの`Assets/MinimalSmoke.unity`を生成し、次を確認します。
+
+1. Official Unity CLI / Pipeline経由でArtist supportを検出する
+2. Plan / PreviewがRead-onlyでExact Diffを返す
+3. Approval TokenなしではApplyを拒否し、Tokenありでは適用する
+4. Mutation、Undo、未SaveをEvidenceへ記録する
+5. 有効なPNG Captureを生成する
+6. Evaluate / RefineのVisual loopを実行する
+7. Session EvidenceをHistoryから取得する
+
+これはSmokeでありRelease Matrixの代わりではありません。各結果は[Compatibility Contracts](../Compatibility/README.md)を参照してください。

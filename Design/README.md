@@ -1,7 +1,17 @@
-# UnitySubAgentHub design records
+# Hub Design Records
 
-`Design/` contains the architecture contract and decision records for the SubAgent registry. The canonical Hub index is `Registry/subagents.yaml`; each specialist's identity and lifecycle contract is in `SubAgents/<id>/manifest.yaml`; shared shapes are in `Schemas/`.
+`Design/`には、複数のOptional Specialist SubAgentを登録するUnitySubAgentHubのArchitecture ContractとDecision Recordを置きます。Hubの現行責務はmetadataのRegistry、Manifest、Schema、Validationです。
 
-UnityAgent remains the only Control Plane. Hub design records do not imply that a specialist is installed, eligible, or executable. Specialist-specific behavior and acceptance rules remain in the contracts linked by each manifest.
+## Canonical records
 
-Legacy MyUnityMCP designs and control-plane proposals remain under `Legacy/MyUnityMCP-1.1.1/Design/` as migration references only. Do not change the published legacy tag.
+- `Registry/subagents.yaml`: 登録ManifestのIndexとFail-Closed規則
+- `SubAgents/<id>/manifest.yaml`: Specialist identity、lifecycle、installation、capability、compatibility、dependency、backend、evidence契約
+- `Schemas/`: Registry / Manifestの共通Shape
+- Manifestが参照するContract: Specialist固有の詳細仕様と受け入れ条件
+- `subagent-hub-architecture.md`: HubとUnityAgentの責任境界
+
+UnityAgentが唯一のControl Planeです。Hubの記録はSpecialistが導入済み、eligible、実行可能であることを示しません。HubはRuntime、Orchestrator、Request Resolver、Installerではありません。
+
+## Legacyとの区別
+
+`Legacy/MyUnityMCP-1.1.1/Design/`は旧MyUnityMCPの設計記録です。現在のHub ContractやUnityAgentのProduction Architectureとして読み替えないでください。

@@ -1,7 +1,34 @@
-# UnityArtistCLI Compatibility Evidence
+# Artist Backend Compatibility Evidence
 
-The Unity 6 URP primary visual scenario is recorded in `unity6-urp-primary-visual-evidence.yaml` and validated by `verify-primary-urp-evidence.py`. The Unity 6 HDRP primary visual scenario is recorded in `unity6-hdrp-primary-visual-evidence.yaml` and validated by `verify-hdrp-primary-evidence.py`. Both use Official Pipeline-authored courtyard fixtures, pipeline-native Volume evidence, before/after captures, a needs-refine review, a guarded refinement, and an accepted final review. Capture PNGs remain local fixture artifacts; their paths and SHA-256 digests are recorded in the evidence files.
+`Tests/Compatibility/`には、Artist BackendのUnity Version / Render Pipeline別のCompatibility Contract、Direct Editor Evidence、Live Smoke / E2E Evidenceを置きます。これはBackendの挙動証明であり、Hub Manifestの登録、Install済み状態、UnityAgent Resolver eligibilityを単独で証明するものではありません。
 
-`support-matrix.yaml` is the authoritative four-row release matrix. `production-editor-acceptance.yaml` records Direct Editor evidence; `production-validation-evidence.yaml` records host/static and E2E evidence; `release-verification.yaml` records the release audit; `cli-pipeline-gate-evidence.yaml` records the concrete 2022.3 first-candidate gate result and `verify-cli-pipeline-gate-evidence.py` checks that every currently listed official version was actually probed.
+## Source of truth
 
-The official Unity CLI + Unity Pipeline is the first candidate for Unity 2022.3 Built-in as well as Unity 6 Built-in/URP/HDRP. The current host has Unity 2022.3.22f1, Unity 6000.6.0f1, and Unity CLI 1.0.0-beta.8 installed. The 2022.3 Pipeline install command returned the concrete failure that the installed Pipeline package requires Unity 6.0 or later; the fixed `official_unity_cli_bounded_batch_fallback` was then verified against the disposable Built-in fixture. Its lifecycle, safety guard, 1920×1080 capture, review, refinement, and history evidence are recorded in `unity2022-3-builtin-bounded-fallback-evidence.yaml`. The shortest connected-editor check is `scripts/run_minimal_live_smoke.py --project-path .\TestProjects\UnityArtistVerification`; its Unity 6 Built-in result is recorded in `unity6-builtin-minimal-smoke-evidence.yaml`. The same runner supports `--reuse-scene` for prepared URP/HDRP fixtures. For CLI help, host resolution, and a read-only Editor inspect without a machine-specific path, use `scripts/verify-external-cli.ps1 -ProjectPath .\TestProjects\UnityArtistVerification-URP`. The full Unity 6 URP and HDRP Cinemachine/Timeline acceptance results are recorded in their corresponding evidence files and validated by their dedicated verifiers. The fuller Unity 6 Built-in evidence is in `unity6-builtin-e2e-evidence.yaml`; no release-matrix row remains unverified by direct evidence on this host.
+- `support-matrix.yaml`: Backendの4行Support Matrix
+- `production-editor-acceptance.yaml`: Direct Editor Evidence
+- `production-validation-evidence.yaml`: Host / Static / E2E Evidence
+- `release-verification.yaml`: Release Audit
+- `cli-pipeline-gate-evidence.yaml`: Unity 2022.3のOfficial Pipeline Gate結果
+- `verify-*-evidence.py`: 各Evidence ContractのValidator
+
+Unity 6 URP / HDRP Primary Visual Scenarioは各対応Evidence YAMLとVerifierが管理します。EvidenceにはPipeline-native Volume、Before / After Capture、Needs-refine Review、Guarded Refinement、Accepted Final Reviewを含みます。PNGはFixture Artifactとして扱い、PathとSHA-256をEvidenceに記録します。
+
+## 2022.3 Built-in gate
+
+Official Unity CLI + Pipelineを最初の候補として検証します。記録されたHostではUnity 2022.3.22f1上でPipeline PackageがUnity 6.0以上を要求し、固定Built-in Fixtureへの限定Batch Fallbackを別Contractで検証しました。Gate failureなしの自動Fallbackは認めません。
+
+## Live checks
+
+最小接続Editor Smoke:
+
+```powershell
+python scripts/run_minimal_live_smoke.py --project-path .\TestProjects\UnityArtistVerification
+```
+
+準備済みURP / HDRP Fixtureを再利用する場合は`--reuse-scene`を使います。Host / CLI / read-only inspectの確認には次を使えます。
+
+```powershell
+.\scripts\verify-external-cli.ps1 -ProjectPath .\TestProjects\UnityArtistVerification-URP
+```
+
+これらのEvidenceは`artist_subagent` Manifestの全Activation Gateが満たされたことや、Hub SnapshotがUnityAgent Runtimeへ取り込まれたことを意味しません。Resolver eligibilityはUnityAgentが現在の環境とProjectを別途観測して判定します。

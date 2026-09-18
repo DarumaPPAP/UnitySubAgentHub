@@ -1,5 +1,7 @@
 # Unity 2022.3 Official Pipeline Gate Fixture
 
-This minimal Built-in project is the disposable fixture used by the Unity CLI/Pipeline compatibility gate. It intentionally contains no UnityArtistCLI scene authoring because every currently listed Official Unity Pipeline version fails before Editor connection on Unity `2022.3.22f1` with the explicit requirement for Unity 6.0 or later.
+この最小Built-in Unity Projectは、Artist BackendのCompatibility検証でOfficial Unity CLI / Pipelineの初回候補を試すDisposable Fixtureです。Unity 2022.3向けの対応機能を示すDemoではありません。
 
-The observed results are recorded in `Tests/Compatibility/cli-pipeline-gate-evidence.yaml`. Do not replace this gate with a fallback backend without a separately approved contract and evidence plan.
+この環境では、列挙済みOfficial Pipeline VersionがUnity 6.0以上を要求し、Editor接続前に失敗したことを記録しています。結果は`Tests/Compatibility/cli-pipeline-gate-evidence.yaml`に保存されています。明示的なGate FailureのEvidenceと別途承認されたContractがない限り、Fallback Backendへ切り替えません。
+
+このFixtureにはArtistによるScene Authoringを追加しません。
