@@ -3,6 +3,9 @@ kind: artist_capability_behavior_contract
 
 # Specialist identity, lifecycle, installation, and capability ids are canonical in
 # ../manifest.yaml. This file contains operation-level rules.
+# The current Agent profile exposes only artist.camera.inspect, artist.camera.refine,
+# and visual.capture. Other operations below are backend surface contracts, not
+# independent Resolver candidates in the current runtime profile.
 capabilities:
   inspect:
     mode: read_only

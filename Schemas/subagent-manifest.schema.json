@@ -68,10 +68,22 @@
     "compatibility": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["unity_versions", "render_pipelines", "support_matrix_ref"],
+      "required": ["supported_targets", "support_matrix_ref"],
       "properties": {
-        "unity_versions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
-        "render_pipelines": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "supported_targets": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["unity_version", "render_pipeline"],
+            "properties": {
+              "unity_version": { "type": "string", "minLength": 1 },
+              "render_pipeline": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
         "support_matrix_ref": { "type": "string", "minLength": 1 }
       }
     },

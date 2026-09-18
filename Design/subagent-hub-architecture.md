@@ -41,7 +41,7 @@ Each manifest declares its own environment gates. Runtime observations such as i
 
 1. Create `SubAgents/<id>/manifest.yaml` using `Schemas/subagent-manifest.schema.json`.
 2. Declare optional installation and `auto_install: false`; list all activation checks and fail-closed behavior.
-3. Declare capabilities, compatibility, dependencies, backend references, evidence requirements, and lifecycle.
+3. Declare resolver-visible capabilities, exact supported version/pipeline target pairs, dependencies, backend references, evidence requirements, and lifecycle. Do not encode compatibility as independent version and pipeline arrays when the support matrix excludes some combinations.
 4. Add only the manifest path to `Registry/subagents.yaml`.
 5. Run `python Tests/Hub/validate_registry.py` and `python -m unittest discover -s Tests/Hub -p 'test_*.py'`.
 6. Add any specialist-specific contract tests and preserve its existing CI.
@@ -49,6 +49,8 @@ Each manifest declares its own environment gates. Runtime observations such as i
 Registering a specialist is data-only. It must not require UnityAgent source changes as long as the manifest uses the shared contract and UnityAgent already supports the declared capability semantics.
 
 `Tests/Hub/export_agent_snapshot.py` generates a data-only profile snapshot from active manifests in the form consumed by the current UnityAgent ReferenceImplementation. CI publishes it as `UnityAgent-SubAgent-Catalog-Snapshot`; UnityAgent source is not copied into or invoked by the Hub. The snapshot is an input artifact only and does not claim that a backend is installed, compatible, bound to the current project, or ready. UnityAgent checks those live gates before ranking. The current ReferenceImplementation does not yet emit the Artist profile's `unity_artist_cli.compatible` fact, so the Artist profile remains ineligible while that fact is unknown; do not remove this gate to make the profile appear available. The current UnityAgent profile resolver also requires exactly one profile for a capability, so the Hub validator rejects overlapping active runtime capability ids until UnityAgent supports ranking them.
+
+The Artist manifest currently exposes only `artist.camera.inspect`, `artist.camera.refine`, and `visual.capture` to the snapshot. Its wider CLI commands and operation contracts are not resolver-visible profiles until explicit capability entries and a supported UnityAgent runtime profile are added.
 
 ## Boundaries
 

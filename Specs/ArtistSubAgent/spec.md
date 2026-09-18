@@ -6,6 +6,10 @@ ArtistSubAgent is the optional Artist specialist selected by UnityAgent. It hand
 
 The canonical Specialist identity, lifecycle, optional installation policy, capabilities, compatibility ranges, dependencies, activation gates, backend references, and evidence requirements are in the [ArtistSubAgent manifest](../../SubAgents/artist_subagent/manifest.yaml). The backend id `unity_artist_cli`, host executable `unity-artist`, command UX `unity artist`, UPM package `com.darumappap.unity-artist`, and C# namespace `UnityArtist` identify implementation compatibility surfaces; they are not the Specialist identity.
 
+## Current UnityAgent resolver profile
+
+The current snapshot exposes only `artist.camera.inspect`, `artist.camera.refine`, and `visual.capture`. The LookDev, cinematic, lighting/environment, evaluation, and other operations described in this backend specification are not independent Resolver candidates until the Hub manifest explicitly registers them and UnityAgent supports their runtime profile.
+
 ## Transport and layering
 
 ```text
@@ -58,7 +62,7 @@ The semantic surface includes LookDev and visual direction, Lighting, Environmen
 | Unity 6.x+ | URP | `urp_native_api` | primary |
 | Unity 6.x+ | HDRP | `hdrp_native_api` | primary |
 
-The 2022.3 row is verified with the official Unity CLI + Unity Pipeline first, followed by the bounded batch fallback after the observed concrete compatibility failure. 2022.3 URP/HDRP, Unity 2023, and URP 14–16 are rejected before mutation with a typed unsupported result.
+The manifest lists exact supported version/pipeline pairs rather than a cross product: 2022.3 LTS supports Built-in only; Unity 6.x+ supports Built-in, URP, and HDRP. The 2022.3 row is verified with the official Unity CLI + Unity Pipeline first, followed by the bounded batch fallback after the observed concrete compatibility failure. 2022.3 URP/HDRP, Unity 2023, and URP 14–16 are rejected before mutation with a typed unsupported result.
 
 ## Error and terminal states
 

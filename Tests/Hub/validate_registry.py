@@ -292,6 +292,13 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
         _valid_reference(root, backend.get("contract_ref"), f"{path}: backends[{index}].contract_ref", errors)
     if len(set(backend_ids)) != len(backend_ids):
         errors.append(f"{path}: backend ids must be unique within a manifest")
+    declared_backend_ids = set(backend_ids)
+    for index, dependency in enumerate(dependencies):
+        if not isinstance(dependency, dict) or dependency.get("kind") != "backend":
+            continue
+        dependency_id = dependency.get("id")
+        if dependency_id not in declared_backend_ids:
+            errors.append(f"{path}: backend dependency {dependency_id!r} must reference a backend declared in backends")
     primary_backends = [backend for backend in backends if isinstance(backend, dict) and backend.get("primary") is True]
     if len(primary_backends) != 1:
         errors.append(f"{path}: exactly one primary backend is required for UnityAgent profile export")

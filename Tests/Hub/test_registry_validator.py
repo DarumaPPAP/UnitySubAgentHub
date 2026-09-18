@@ -25,8 +25,7 @@ def manifest(subagent_id: str, backend_id: str) -> dict:
         "capabilities": [{"id": capability_prefix, "operations": ["inspect"]}],
         "capability_contract_ref": "Contracts/capabilities.yaml",
         "compatibility": {
-            "unity_versions": ["Unity 6.x+"],
-            "render_pipelines": ["builtin", "urp"],
+            "supported_targets": [{"unity_version": "Unity 6.x+", "render_pipeline": "builtin"}],
             "support_matrix_ref": "Contracts/support-matrix.yaml",
         },
         "dependencies": [
@@ -152,6 +151,18 @@ class RegistryValidatorTests(unittest.TestCase):
         errors = validate_repository(self.root)
 
         self.assertTrue(any("eligibility_gate is required for required dependencies" in error for error in errors))
+
+    def test_required_backend_dependency_must_reference_a_declared_backend(self) -> None:
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        path = self.root / "SubAgents/artist_subagent/manifest.yaml"
+        value = __import__("yaml").safe_load(path.read_text(encoding="utf-8"))
+        value["dependencies"][0]["id"] = "missing_backend"
+        path.write_text(__import__("yaml").safe_dump(value, sort_keys=False), encoding="utf-8")
+        self.write_registry()
+
+        errors = validate_repository(self.root)
+
+        self.assertTrue(any("backend dependency" in error and "missing_backend" in error for error in errors))
 
     def test_backend_id_must_be_distinct_from_subagent_id(self) -> None:
         self.add_manifest("artist_subagent", "artist_subagent")

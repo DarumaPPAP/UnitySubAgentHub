@@ -180,6 +180,14 @@ def check_catalog(errors: list[str]) -> None:
     activation = manifest.get("activation") or {}
     if activation.get("false_behavior") != "exclude_from_resolution" or activation.get("unknown_behavior") != "exclude_from_resolution":
         error(errors, "false or unknown ArtistSubAgent activation must be excluded from resolution")
+    compatibility = manifest.get("compatibility") or {}
+    targets = compatibility.get("supported_targets") or []
+    actual_targets = {
+        (str(target.get("unity_version")), str(target.get("render_pipeline")))
+        for target in targets if isinstance(target, dict)
+    }
+    if actual_targets != EXPECTED_ROWS:
+        error(errors, "manifest supported version/pipeline pairs disagree with the Artist release matrix")
     backends = manifest.get("backends") or []
     primary = [backend for backend in backends if backend.get("primary") is True]
     if len(primary) != 1 or primary[0].get("id") != "unity_artist_cli" or primary[0].get("id") == identity.get("id"):

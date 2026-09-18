@@ -6,6 +6,10 @@ ArtistSubAgent は、UnityAgent からのみ委譲される Visual Art / LookDev
 
 製品・専門Agentとしての正本名は `ArtistSubAgent`、runtime id は `artist_subagent` です。既存の `unity-artist` executable、`unity artist <command>` UX、`com.darumappap.unity-artist` UPM Package、`UnityArtist` namespace は **実行Backendの互換Surface** として維持します。
 
+## Resolver-visible profile boundary
+
+The current UnityAgent profile exposes only `artist.camera.inspect`, `artist.camera.refine`, and `visual.capture`. The full CLI command list below describes backend support; LookDev, cinematic, lighting/environment, evaluation, and other backend operations are not separate Resolver candidates until the Hub manifest declares them and UnityAgent supports their runtime profile.
+
 ## Current contract
 
 ```text

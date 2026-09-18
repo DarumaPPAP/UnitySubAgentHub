@@ -18,6 +18,8 @@ Policy、Approval、環境検出、Project Binding、Capability解決、実行�
 
 SpecialistとBackendのIDは別物です。Artist Backendの既存実装は移行中の互換性維持のため `Packages/` と `src/` に残していますが、Hub Registryから実行することはありません。
 
+現在のUnityAgent profileがResolverに公開するArtist capabilityは `artist.camera.inspect`、`artist.camera.refine`、`visual.capture` です。Artistの既存CLIと詳細Contractに記載されたLookDev、Cinematic、Lighting、Environment、Evaluationなどの操作はBackend surfaceであり、現在のprofileでは独立したResolver候補になりません。
+
 ## 解決条件とインストール方針
 
 すべてのSubAgentはOptionalです。UnityAgentは候補をランキングする前に、Lifecycle・インストール・互換性・Project Binding・Availability・Manifestの有効化条件を確認します。
@@ -42,7 +44,7 @@ registered → discovered → installed → compatible → project_bound
 ## 新しいSubAgentの追加
 
 1. `Schemas/subagent-manifest.schema.json` に従って `SubAgents/<id>/manifest.yaml` を作ります。
-2. Optional導入、`auto_install: false`、Fail-Closed有効化条件、Capability、互換性、依存条件、Backend、Evidenceを定義します。
+2. Optional導入、`auto_install: false`、Fail-Closed有効化条件、Resolver-visible Capability、正確なUnity version/render pipelineの組み合わせ、依存条件、Backend、Evidenceを定義します。
 3. Manifestのパスだけを `Registry/subagents.yaml` に追加します。
 4. 次を実行します。
 

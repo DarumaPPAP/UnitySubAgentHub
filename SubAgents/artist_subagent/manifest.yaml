@@ -31,8 +31,15 @@ capabilities:
 capability_contract_ref: SubAgents/artist_subagent/contracts/capability-contracts.yaml
 
 compatibility:
-  unity_versions: ["2022.3 LTS", "Unity 6.x+"]
-  render_pipelines: [builtin, urp, hdrp]
+  supported_targets:
+    - unity_version: "2022.3 LTS"
+      render_pipeline: builtin
+    - unity_version: "Unity 6.x+"
+      render_pipeline: builtin
+    - unity_version: "Unity 6.x+"
+      render_pipeline: urp
+    - unity_version: "Unity 6.x+"
+      render_pipeline: hdrp
   support_matrix_ref: Tests/Compatibility/support-matrix.yaml
 
 dependencies:
