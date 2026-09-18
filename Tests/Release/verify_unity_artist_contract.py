@@ -18,8 +18,8 @@ CLI_SOURCE = ROOT / "src/UnityArtist.Cli/Program.cs"
 EDITOR_ROOT = ROOT / "Packages/com.darumappap.unity-artist/Editor"
 MATRIX_PATH = ROOT / "Tests/Compatibility/support-matrix.yaml"
 GATE_EVIDENCE_PATH = ROOT / "Tests/Compatibility/cli-pipeline-gate-evidence.yaml"
-CATALOG_PATH = ROOT / "Catalog/artist-subagent-catalog.yaml"
-SURFACE_PATH = ROOT / "Catalog/production-surface-contract.yaml"
+MANIFEST_PATH = ROOT / "SubAgents/artist_subagent/manifest.yaml"
+SURFACE_PATH = ROOT / "SubAgents/artist_subagent/contracts/backend-surface-contract.yaml"
 REPO_SKILLS_ROOT = ROOT / ".agents/skills"
 LEGACY_PLUGIN_ROOT = ROOT / ".agents/plugins/unity-artist"
 
@@ -165,29 +165,34 @@ def check_cli_pipeline_gate_evidence(errors: list[str]) -> None:
 
 
 def check_catalog(errors: list[str]) -> None:
-    catalog = read_yaml(errors, CATALOG_PATH)
+    manifest = read_yaml(errors, MANIFEST_PATH)
     surface = read_yaml(errors, SURFACE_PATH)
-    if catalog.get("product") != "ArtistSubAgent" or surface.get("product") != "ArtistSubAgent":
-        error(errors, "Catalog product identity is not ArtistSubAgent")
-    if catalog.get("subagent_id") != "artist_subagent" or surface.get("subagent_id") != "artist_subagent":
-        error(errors, "canonical SubAgent id is not artist_subagent")
-    backend = catalog.get("backend") or {}
-    if backend.get("id") != "unity_artist_cli" or surface.get("backend_id") != "unity_artist_cli":
-        error(errors, "unity_artist_cli must remain a backend compatibility id only")
-    install = catalog.get("installation") or {}
-    if install.get("mode") != "optional" or install.get("auto_install") is not False:
+    identity = manifest.get("identity") or {}
+    if manifest.get("kind") != "subagent_manifest" or identity.get("name") != "ArtistSubAgent":
+        error(errors, "canonical ArtistSubAgent manifest identity is invalid")
+    if identity.get("id") != "artist_subagent" or identity.get("version") != "0.0.1-beta":
+        error(errors, "canonical SubAgent id or release version is invalid")
+    if manifest.get("lifecycle") != "active":
+        error(errors, "ArtistSubAgent manifest must remain active")
+    install = manifest.get("installation") or {}
+    if install.get("mode") != "optional" or install.get("required") is not False or install.get("auto_install") is not False:
         error(errors, "ArtistSubAgent must remain optional and no-auto-install")
-    if install.get("unavailable_behavior") != "exclude_from_resolution":
-        error(errors, "unavailable ArtistSubAgent must be excluded from resolution")
-    if catalog.get("release_version") != "0.0.1-beta" or surface.get("release_version") != "0.0.1-beta":
-        error(errors, "Catalog release version is not 0.0.1-beta")
+    activation = manifest.get("activation") or {}
+    if activation.get("false_behavior") != "exclude_from_resolution" or activation.get("unknown_behavior") != "exclude_from_resolution":
+        error(errors, "false or unknown ArtistSubAgent activation must be excluded from resolution")
+    backends = manifest.get("backends") or []
+    primary = [backend for backend in backends if backend.get("primary") is True]
+    if len(primary) != 1 or primary[0].get("id") != "unity_artist_cli" or primary[0].get("id") == identity.get("id"):
+        error(errors, "unity_artist_cli must remain a distinct primary backend id")
+    if surface.get("kind") != "specialist_backend_surface_contract":
+        error(errors, "Artist backend surface contract kind is invalid")
     if surface.get("backend_commands") and set(surface["backend_commands"]) != REQUIRED_COMMANDS:
         error(errors, "backend command set disagrees with CLI contract")
-    if surface.get("mcp_transport") is not False or surface.get("second_control_plane") is not False or surface.get("second_provider_registry") is not False:
-        error(errors, "production surface must disable MCP transport and duplicate control/provider planes")
-    if surface.get("standalone_codex_plugin") is not False:
-        error(errors, "ArtistSubAgent must not expose a standalone Codex plugin")
-
+    forbidden = set(surface.get("forbidden_surface") or [])
+    if not {"mcp_transport", "generic_gameobject_crud", "generic_hierarchy_crud", "arbitrary_eval"}.issubset(forbidden):
+        error(errors, "backend surface must continue to forbid MCP and generic CRUD/eval")
+    if surface.get("automatic_save") is not False or surface.get("arbitrary_eval") is not False:
+        error(errors, "Artist backend surface must disable automatic save and arbitrary eval")
 
 def check_agent_distribution(errors: list[str]) -> None:
     if LEGACY_PLUGIN_ROOT.exists():

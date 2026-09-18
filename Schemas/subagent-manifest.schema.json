@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://darumappap.github.io/UnitySubAgentHub/schemas/subagent-manifest.schema.json",
+  "title": "SubAgent Manifest",
+  "description": "Portable SubAgent identity and contract metadata. Installation and environment eligibility are resolved by UnityAgent at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "identity", "lifecycle", "installation", "activation", "capabilities", "capability_contract_ref", "compatibility", "dependencies", "backends", "runtime_profile", "evidence"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "kind": { "const": "subagent_manifest" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*_subagent$" },
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "lifecycle": { "enum": ["active", "deprecated", "retired", "revoked"] },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "required", "auto_install"],
+      "properties": {
+        "mode": { "const": "optional" },
+        "required": { "const": false },
+        "auto_install": { "const": false }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_before_resolution", "false_behavior", "unknown_behavior"],
+      "properties": {
+        "required_before_resolution": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "false_behavior": { "const": "exclude_from_resolution" },
+        "unknown_behavior": { "const": "exclude_from_resolution" }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "operations"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$" },
+          "operations": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "capability_contract_ref": { "type": "string", "minLength": 1 },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unity_versions", "render_pipelines", "support_matrix_ref"],
+      "properties": {
+        "unity_versions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "render_pipelines": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "support_matrix_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "required"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["backend", "unity_package", "unity_module", "tool"] },
+          "required": { "type": "boolean" },
+          "eligibility_gate": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "backends": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "primary", "contract_ref"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "kind": { "enum": ["cli", "unity_package", "http", "rpc", "library"] },
+          "primary": { "type": "boolean" },
+          "executable": { "type": "string", "minLength": 1 },
+          "package_id": { "type": "string", "minLength": 1 },
+          "transport": { "type": "string", "minLength": 1 },
+          "fallback_transport": { "type": "string", "minLength": 1 },
+          "fallback_policy": { "type": "string", "minLength": 1 },
+          "contract_ref": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "runtime_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["audience", "goal_type", "primary_capability", "scope", "value", "approval"],
+      "properties": {
+        "audience": { "type": "string", "minLength": 1 },
+        "goal_type": { "type": "string", "minLength": 1 },
+        "primary_capability": { "type": "string", "minLength": 1 },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default_target_guid", "component_type", "property_paths", "mutation_channels", "max_targets"],
+          "properties": {
+            "default_target_guid": { "type": "string", "minLength": 1 },
+            "component_type": { "type": "string", "minLength": 1 },
+            "property_paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "mutation_channels": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "max_targets": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "value": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "unit", "minimum", "maximum", "maximum_exclusive"],
+          "properties": {
+            "type": { "type": "string", "minLength": 1 },
+            "unit": { "type": "string", "minLength": 1 },
+            "minimum": { "type": "number" },
+            "maximum": { "type": "number" },
+            "maximum_exclusive": { "type": "boolean" }
+          }
+        },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default_minimum", "default_maximum", "minimum_exclusive", "maximum_exclusive"],
+          "properties": {
+            "default_minimum": { "type": "number" },
+            "default_maximum": { "type": "number" },
+            "minimum_exclusive": { "type": "boolean" },
+            "maximum_exclusive": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "required_artifacts", "runtime_types", "runtime_provenance", "terminal_states", "contract_ref"],
+      "properties": {
+        "required": { "const": true },
+        "required_artifacts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "runtime_types": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "runtime_provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_type", "producer", "provenance_token"],
+          "properties": {
+            "source_type": { "type": "string", "minLength": 1 },
+            "producer": { "type": "string", "minLength": 1 },
+            "provenance_token": { "type": "string", "minLength": 1 }
+          }
+        },
+        "terminal_states": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["verified", "partial_verified", "blocked_by_environment", "unavailable"] }
+        },
+        "contract_ref": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

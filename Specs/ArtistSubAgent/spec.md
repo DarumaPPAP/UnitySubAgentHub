@@ -1,10 +1,10 @@
-# ArtistSubAgent 0.0.1-beta Specification
+# ArtistSubAgent Backend Specification
 
 ## Product boundary
 
 ArtistSubAgent is the optional Artist specialist selected by UnityAgent. It handles visual intent inspection and planning, mood/lookdev, lighting, environment, sky/fog/reflection/GI, camera/depth/continuity, Cinemachine/Timeline cinematic planning, capture, human evaluation, and linked refinement. It does not become a general Unity editor API or a second Control Plane.
 
-The canonical SubAgent id is `artist_subagent`. The host executable `unity-artist`, command UX `unity artist`, UPM package `com.darumappap.unity-artist`, C# namespace `UnityArtist`, and backend id `unity_artist_cli` are compatibility surfaces of the current execution backend.
+The canonical Specialist identity, lifecycle, optional installation policy, capabilities, compatibility ranges, dependencies, activation gates, backend references, and evidence requirements are in the [ArtistSubAgent manifest](../../SubAgents/artist_subagent/manifest.yaml). The backend id `unity_artist_cli`, host executable `unity-artist`, command UX `unity artist`, UPM package `com.darumappap.unity-artist`, and C# namespace `UnityArtist` identify implementation compatibility surfaces; they are not the Specialist identity.
 
 ## Transport and layering
 
@@ -27,7 +27,7 @@ For Unity 2022.3 LTS + Built-in, the host always probes the Official Unity CLI/P
 
 ## Activation contract
 
-ArtistSubAgent is optional and must never be auto-installed by capability resolution. It is eligible only after backend availability, explicit Project binding, Artist UPM package installation, and Pipeline reachability are observed true. False or unknown activation facts exclude ArtistSubAgent before ranking or execution. Setup is an explicit operation initiated by the user.
+ArtistSubAgent is optional and must never be auto-installed by capability resolution. Its canonical gates are listed in the [manifest](../../SubAgents/artist_subagent/manifest.yaml); backend availability, compatibility, explicit Project binding, Artist UPM package installation, and Pipeline reachability must all be observed true. False or unknown activation facts exclude ArtistSubAgent before ranking or execution. Setup is an explicit operation initiated by the user.
 
 ## Backend command contract
 
@@ -64,4 +64,4 @@ The 2022.3 row is verified with the official Unity CLI + Unity Pipeline first, f
 
 The ArtistSubAgent backend uses structured codes including `PROJECT_PATH_REQUIRED`, `UNITY_CLI_UNAVAILABLE`, `PIPELINE_INSTALL_FAILED`, `CAPABILITY_UNAVAILABLE`, `UNSUPPORTED_UNITY_VERSION`, `UNSUPPORTED_RENDER_PIPELINE_VERSION`, `STALE_REVISION`, `APPROVAL_REQUIRED`, `PLAN_ID_REQUIRED`, `CAMERA_NOT_FOUND`, `INVALID_REVIEW_DECISION`, `TIMEOUT`, and `ARTIST_PIPELINE_COMMAND_FAILED`.
 
-Evidence terminal states are `verified`, `partial_verified`, and `blocked_by_environment`; `implemented_unverified` is not a completion state. The 2022.3 bounded fixture uses `verified_for_fixture` inside its evidence record and is rolled up to the release audit separately from the remaining host-level limitations.
+Evidence artifact requirements and terminal states are declared by the [manifest](../../SubAgents/artist_subagent/manifest.yaml) and its linked release-verification contract. `implemented_unverified` is not a completion state. The 2022.3 bounded fixture uses `verified_for_fixture` inside its evidence record and is rolled up to the release audit separately from the remaining host-level limitations.

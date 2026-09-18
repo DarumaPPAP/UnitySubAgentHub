@@ -1,25 +1,8 @@
-schema_version: "2.1"
-kind: artist_subagent_capability_contracts
-authority: current_production
-product: ArtistSubAgent
-subagent_id: artist_subagent
-backend_id: unity_artist_cli
-release_version: "0.0.1-beta"
-activation:
-  install_mode: optional
-  auto_install: false
-  required_before_resolution: [backend_available, project_bound, package_installed, pipeline_reachable]
-  unavailable_behavior: exclude_from_resolution
-principles:
-  progressive_disclosure: true
-  explicit_activation_required: true
-  unavailable_is_not_passed: true
-  capture_is_not_visual_acceptance: true
-  compile_is_not_runtime_acceptance: true
-  no_silent_fallback: true
-  no_arbitrary_eval: true
-  no_standalone_codex_plugin: true
+schema_version: "1.0"
+kind: artist_capability_behavior_contract
 
+# Specialist identity, lifecycle, installation, and capability ids are canonical in
+# ../manifest.yaml. This file contains operation-level rules.
 capabilities:
   inspect:
     mode: read_only
