@@ -13,7 +13,7 @@ def main() -> None:
     workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
 
     required_installer_tokens = (
-        '"DarumaPPAP/UnityArtistCLI"',
+        '"DarumaPPAP/UnitySubAgentHub"',
         '"v0.0.1-beta"',
         '"UnityArtistCLI-host-windows-x64.zip"',
         '"https://github.com/$repository/releases/download/$requestedVersion"',

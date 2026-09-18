@@ -1,0 +1,400 @@
+#!/usr/bin/env python3
+"""Validate the SubAgent Hub registry and every indexed SubAgent manifest."""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path, PurePosixPath
+import re
+import sys
+from typing import Any
+
+import yaml
+
+
+ROOT = Path(__file__).resolve().parents[2]
+REGISTRY_PATH = "Registry/subagents.yaml"
+REGISTRY_SCHEMA_PATH = "Schemas/subagent-registry.schema.json"
+MANIFEST_SCHEMA_PATH = "Schemas/subagent-manifest.schema.json"
+MANIFEST_ROOT = "SubAgents"
+EXPECTED_PHASE_ORDER = ["registered", "discovered", "installed", "compatible", "project_bound", "available", "eligible", "ranked"]
+LIFECYCLES = {"active", "deprecated", "retired", "revoked"}
+SUBAGENT_ID = re.compile(r"^[a-z][a-z0-9_]*_subagent$")
+BACKEND_ID = re.compile(r"^[a-z][a-z0-9_]*$")
+MANIFEST_PATH = re.compile(r"^SubAgents/([a-z][a-z0-9_]*_subagent)/manifest\.yaml$")
+SUPPORTED_SCHEMA_KEYWORDS = {
+    "$schema", "$id", "title", "description", "type", "additionalProperties", "required", "properties",
+    "const", "enum", "minItems", "uniqueItems", "items", "pattern", "minLength", "minimum",
+}
+
+
+def _read_yaml(path: Path, errors: list[str]) -> Any:
+    try:
+        return yaml.safe_load(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append(f"missing YAML file: {path}")
+    except (OSError, yaml.YAMLError) as exc:
+        errors.append(f"invalid YAML file {path}: {exc}")
+    return None
+
+
+def _read_json(path: Path, errors: list[str]) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append(f"missing JSON Schema: {path}")
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"invalid JSON Schema {path}: {exc}")
+    return None
+
+
+def _check_schema_definition(schema: Any, location: str, errors: list[str]) -> dict[str, Any]:
+    if not isinstance(schema, dict):
+        errors.append(f"{location}: schema root must be an object")
+        return {}
+    if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+        errors.append(f"{location}: schema must declare JSON Schema Draft 2020-12")
+    if schema.get("type") != "object" or not isinstance(schema.get("properties"), dict):
+        errors.append(f"{location}: schema must define an object with properties")
+    if not isinstance(schema.get("required"), list):
+        errors.append(f"{location}: schema must declare required properties")
+    return schema
+
+
+def _schema_errors(value: Any, schema: Any, location: str, errors: list[str]) -> None:
+    """Apply the constrained JSON Schema subset used by the checked-in contracts."""
+    if not isinstance(schema, dict):
+        errors.append(f"{location}: schema node must be an object")
+        return
+    unsupported = sorted(set(schema) - SUPPORTED_SCHEMA_KEYWORDS)
+    if unsupported:
+        errors.append(f"{location}: schema uses unsupported keywords {unsupported}; extend the validator before relying on them")
+    additional_properties = schema.get("additionalProperties")
+    if additional_properties is not None and not isinstance(additional_properties, bool):
+        errors.append(f"{location}: additionalProperties must be boolean")
+
+    type_name = schema.get("type")
+    type_checks = {
+        "object": lambda item: isinstance(item, dict),
+        "array": lambda item: isinstance(item, list),
+        "string": lambda item: isinstance(item, str),
+        "boolean": lambda item: isinstance(item, bool),
+        "integer": lambda item: isinstance(item, int) and not isinstance(item, bool),
+        "number": lambda item: isinstance(item, (int, float)) and not isinstance(item, bool),
+    }
+    if type_name is not None and (not isinstance(type_name, str) or type_name not in type_checks):
+        errors.append(f"{location}: unsupported schema type {type_name!r}")
+        return
+    if type_name in type_checks and not type_checks[type_name](value):
+        errors.append(f"{location}: expected {type_name}")
+        return
+
+    if "const" in schema and value != schema["const"]:
+        errors.append(f"{location}: must equal {schema['const']!r}")
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{location}: must be one of {schema['enum']!r}")
+    if "minimum" in schema and isinstance(value, (int, float)) and not isinstance(value, bool) and value < schema["minimum"]:
+        errors.append(f"{location}: must be at least {schema['minimum']}")
+    if isinstance(value, str):
+        if len(value) < schema.get("minLength", 0):
+            errors.append(f"{location}: must not be empty")
+        pattern = schema.get("pattern")
+        if pattern and re.fullmatch(pattern, value) is None:
+            errors.append(f"{location}: does not match required pattern {pattern!r}")
+    if isinstance(value, list):
+        if len(value) < schema.get("minItems", 0):
+            errors.append(f"{location}: must contain at least {schema['minItems']} item(s)")
+        if schema.get("uniqueItems") and len({json.dumps(item, sort_keys=True, default=str) for item in value}) != len(value):
+            errors.append(f"{location}: items must be unique")
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for index, item in enumerate(value):
+                _schema_errors(item, item_schema, f"{location}[{index}]", errors)
+    if isinstance(value, dict):
+        for required in schema.get("required", []):
+            if required not in value:
+                errors.append(f"{location}: missing required property {required!r}")
+        properties = schema.get("properties", {})
+        for key, item in value.items():
+            if key in properties:
+                _schema_errors(item, properties[key], f"{location}.{key}", errors)
+            elif schema.get("additionalProperties") is False:
+                errors.append(f"{location}: unexpected property {key!r}")
+
+
+def _valid_reference(root: Path, value: Any, location: str, errors: list[str]) -> None:
+    if not isinstance(value, str) or not value:
+        errors.append(f"{location}: contract reference must be a non-empty repository-relative path")
+        return
+    path = PurePosixPath(value)
+    if path.is_absolute() or ".." in path.parts or "\\" in value:
+        errors.append(f"{location}: contract reference must not escape the repository: {value!r}")
+        return
+    resolved = (root / Path(*path.parts)).resolve()
+    try:
+        resolved.relative_to(root.resolve())
+    except ValueError:
+        errors.append(f"{location}: contract reference resolves outside the repository: {value!r}")
+        return
+    if not resolved.is_file():
+        errors.append(f"{location}: referenced contract file does not exist: {value}")
+
+
+def _validate_registry(root: Path, schema: Any, errors: list[str]) -> tuple[dict[str, Any], list[str]]:
+    path = root / REGISTRY_PATH
+    registry = _read_yaml(path, errors)
+    if not isinstance(registry, dict):
+        errors.append("Registry/subagents.yaml: root must be a mapping")
+        return {}, []
+    _schema_errors(registry, schema, REGISTRY_PATH, errors)
+
+    if registry.get("schema_version") != "1.0" or registry.get("kind") != "subagent_registry":
+        errors.append("Registry/subagents.yaml: unsupported schema_version or kind")
+    if registry.get("control_plane") != "unity_agent":
+        errors.append("Registry/subagents.yaml: UnityAgent must remain the sole control plane")
+    runtime = registry.get("runtime")
+    if not isinstance(runtime, dict) or runtime.get("owns_execution") is not False or runtime.get("owns_resolution") is not False:
+        errors.append("Registry/subagents.yaml: Hub must not own SubAgent execution or capability resolution")
+    if not isinstance(runtime, dict) or runtime.get("auto_install") is not False:
+        errors.append("Registry/subagents.yaml: Hub must not auto-install SubAgents")
+
+    resolution = registry.get("resolution")
+    if not isinstance(resolution, dict):
+        resolution = {}
+    if resolution.get("phase_order") != EXPECTED_PHASE_ORDER:
+        errors.append("Registry/subagents.yaml: resolution phase_order must filter eligibility before ranking")
+    if resolution.get("eligible_lifecycle") != "active":
+        errors.append("Registry/subagents.yaml: only active lifecycle entries may be eligible")
+    if resolution.get("unknown_behavior") != "exclude_from_resolution" or resolution.get("unavailable_behavior") != "exclude_from_resolution":
+        errors.append("Registry/subagents.yaml: unknown or unavailable SubAgents must be excluded from resolution")
+    if resolution.get("auto_install") is not False:
+        errors.append("Registry/subagents.yaml: capability resolution must never auto-install")
+
+    entries = registry.get("entries")
+    if not isinstance(entries, list) or not entries:
+        errors.append("Registry/subagents.yaml: entries must list at least one manifest")
+        entries = []
+    paths: list[str] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict) or not isinstance(entry.get("manifest"), str):
+            errors.append(f"Registry/subagents.yaml: entries[{index}] must contain a manifest path")
+            continue
+        manifest_path = entry["manifest"]
+        if not MANIFEST_PATH.fullmatch(manifest_path):
+            errors.append(f"Registry/subagents.yaml: invalid manifest path {manifest_path!r}")
+            continue
+        paths.append(manifest_path)
+    if len(set(paths)) != len(paths):
+        errors.append("Registry/subagents.yaml: manifest entries must be unique")
+    return registry, paths
+
+
+def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) -> dict[str, Any] | None:
+    manifest_file = root / Path(*PurePosixPath(path).parts)
+    try:
+        manifest_file.resolve().relative_to(root.resolve())
+    except ValueError:
+        errors.append(f"{path}: manifest resolves outside the repository")
+        return None
+    manifest = _read_yaml(manifest_file, errors)
+    if not isinstance(manifest, dict):
+        errors.append(f"{path}: root must be a mapping")
+        return None
+    _schema_errors(manifest, schema, path, errors)
+
+    identity = manifest.get("identity") if isinstance(manifest.get("identity"), dict) else {}
+    subagent_id = identity.get("id")
+    match = MANIFEST_PATH.fullmatch(path)
+    if not isinstance(subagent_id, str) or not SUBAGENT_ID.fullmatch(subagent_id):
+        errors.append(f"{path}: identity.id must be a canonical *_subagent id")
+    elif match and subagent_id != match.group(1):
+        errors.append(f"{path}: identity.id must match its SubAgents/<id> directory")
+
+    if manifest.get("lifecycle") not in LIFECYCLES:
+        errors.append(f"{path}: lifecycle must be active, deprecated, retired, or revoked")
+    installation = manifest.get("installation")
+    if not isinstance(installation, dict) or installation.get("mode") != "optional":
+        errors.append(f"{path}: every SubAgent must be optional")
+    if not isinstance(installation, dict) or installation.get("required") is not False:
+        errors.append(f"{path}: specialist installation must remain optional")
+    if not isinstance(installation, dict) or installation.get("auto_install") is not False:
+        errors.append(f"{path}: SubAgents must not auto-install")
+
+    activation = manifest.get("activation")
+    if not isinstance(activation, dict):
+        activation = {}
+    gates = activation.get("required_before_resolution")
+    if not isinstance(gates, list) or not gates or any(not isinstance(gate, str) or not gate for gate in gates):
+        errors.append(f"{path}: activation.required_before_resolution must list required environment checks")
+    if activation.get("false_behavior") != "exclude_from_resolution" or activation.get("unknown_behavior") != "exclude_from_resolution":
+        errors.append(f"{path}: false and unknown activation checks must exclude the SubAgent")
+
+    capabilities = manifest.get("capabilities")
+    if not isinstance(capabilities, list) or not capabilities:
+        capabilities = []
+        # The schema reports the structural failure; continue with reference checks.
+    capability_ids: list[str] = []
+    for index, capability in enumerate(capabilities):
+        if not isinstance(capability, dict):
+            continue
+        capability_id = capability.get("id")
+        operations = capability.get("operations")
+        if not isinstance(capability_id, str) or not capability_id or not isinstance(operations, list) or not operations:
+            errors.append(f"{path}: capabilities[{index}] requires an id and supported operations")
+        if isinstance(capability_id, str):
+            capability_ids.append(capability_id)
+    if len(set(capability_ids)) != len(capability_ids):
+        errors.append(f"{path}: capability ids must be unique")
+    _valid_reference(root, manifest.get("capability_contract_ref"), f"{path}: capability_contract_ref", errors)
+
+    compatibility = manifest.get("compatibility")
+    if isinstance(compatibility, dict):
+        _valid_reference(root, compatibility.get("support_matrix_ref"), f"{path}: compatibility.support_matrix_ref", errors)
+    else:
+        errors.append(f"{path}: compatibility contract is required")
+
+    dependencies = manifest.get("dependencies")
+    if not isinstance(dependencies, list):
+        dependencies = []
+    dependency_ids: set[str] = set()
+    for index, dependency in enumerate(dependencies):
+        if not isinstance(dependency, dict):
+            continue
+        dependency_id = dependency.get("id")
+        if not isinstance(dependency_id, str) or not dependency_id:
+            errors.append(f"{path}: dependencies[{index}].id is required")
+        elif dependency_id in dependency_ids:
+            errors.append(f"{path}: dependency ids must be unique")
+        else:
+            dependency_ids.add(dependency_id)
+        gate = dependency.get("eligibility_gate")
+        if dependency.get("required") is True:
+            if not isinstance(gate, str) or not gate:
+                errors.append(f"{path}: dependencies[{index}].eligibility_gate is required for required dependencies")
+            elif isinstance(gates, list) and gate not in gates:
+                errors.append(f"{path}: required dependency gate {gate!r} must be checked before resolution")
+
+    backends = manifest.get("backends")
+    if not isinstance(backends, list) or not backends:
+        backends = []
+        # The schema reports the structural failure.
+    backend_ids: list[str] = []
+    for index, backend in enumerate(backends):
+        if not isinstance(backend, dict):
+            continue
+        backend_id = backend.get("id")
+        if not isinstance(backend_id, str) or not BACKEND_ID.fullmatch(backend_id):
+            errors.append(f"{path}: backends[{index}].id must be a valid backend id")
+            continue
+        backend_ids.append(backend_id)
+        if backend_id == subagent_id:
+            errors.append(f"{path}: backend identity must differ from SubAgent identity")
+        _valid_reference(root, backend.get("contract_ref"), f"{path}: backends[{index}].contract_ref", errors)
+    if len(set(backend_ids)) != len(backend_ids):
+        errors.append(f"{path}: backend ids must be unique within a manifest")
+    declared_backend_ids = set(backend_ids)
+    for index, dependency in enumerate(dependencies):
+        if not isinstance(dependency, dict) or dependency.get("kind") != "backend":
+            continue
+        dependency_id = dependency.get("id")
+        if dependency_id not in declared_backend_ids:
+            errors.append(f"{path}: backend dependency {dependency_id!r} must reference a backend declared in backends")
+    primary_backends = [backend for backend in backends if isinstance(backend, dict) and backend.get("primary") is True]
+    if len(primary_backends) != 1:
+        errors.append(f"{path}: exactly one primary backend is required for UnityAgent profile export")
+    active_gates = {gate for gate in gates if isinstance(gate, str)} if isinstance(gates, list) else set()
+    for backend in primary_backends:
+        backend_id = backend.get("id")
+        has_required_gate = any(
+            isinstance(dependency, dict)
+            and dependency.get("kind") == "backend"
+            and dependency.get("id") == backend_id
+            and dependency.get("required") is True
+            and isinstance(dependency.get("eligibility_gate"), str)
+            and dependency.get("eligibility_gate") in active_gates
+            for dependency in dependencies
+        )
+        if not has_required_gate:
+            errors.append(f"{path}: primary backend {backend_id!r} must have a required dependency gate in activation")
+
+    runtime_profile = manifest.get("runtime_profile")
+    if isinstance(runtime_profile, dict):
+        runtime_capabilities = [f"{capability.get('id')}.{operation}" for capability in capabilities if isinstance(capability, dict) for operation in capability.get("operations", [])]
+        if runtime_profile.get("primary_capability") not in runtime_capabilities:
+            errors.append(f"{path}: runtime_profile.primary_capability must be declared by capabilities")
+        if runtime_profile.get("goal_type") not in runtime_capabilities:
+            errors.append(f"{path}: runtime_profile.goal_type must be declared by capabilities")
+        value = runtime_profile.get("value")
+        approval = runtime_profile.get("approval")
+        if isinstance(value, dict) and isinstance(value.get("minimum"), (int, float)) and isinstance(value.get("maximum"), (int, float)) and value["minimum"] >= value["maximum"]:
+            errors.append(f"{path}: runtime_profile.value minimum must be lower than maximum")
+        if isinstance(approval, dict) and isinstance(approval.get("default_minimum"), (int, float)) and isinstance(approval.get("default_maximum"), (int, float)) and approval["default_minimum"] > approval["default_maximum"]:
+            errors.append(f"{path}: runtime_profile.approval minimum must not exceed maximum")
+
+    evidence = manifest.get("evidence")
+    if not isinstance(evidence, dict) or evidence.get("required") is not True:
+        errors.append(f"{path}: evidence must be required")
+    else:
+        _valid_reference(root, evidence.get("contract_ref"), f"{path}: evidence.contract_ref", errors)
+        runtime_types = evidence.get("runtime_types")
+        if not isinstance(runtime_types, list) or not runtime_types or any(not isinstance(value, str) or not value for value in runtime_types):
+            errors.append(f"{path}: evidence.runtime_types must list UnityAgent evidence types")
+    return manifest
+
+
+def validate_repository(root: Path = ROOT) -> list[str]:
+    """Return every Hub contract violation found in the repository tree."""
+    errors: list[str] = []
+    manifest_schema = _check_schema_definition(_read_json(root / MANIFEST_SCHEMA_PATH, errors), MANIFEST_SCHEMA_PATH, errors)
+    registry_schema = _check_schema_definition(_read_json(root / REGISTRY_SCHEMA_PATH, errors), REGISTRY_SCHEMA_PATH, errors)
+    registry, registered_paths = _validate_registry(root, registry_schema, errors)
+    manifest_root = root / MANIFEST_ROOT
+    discovered_paths = sorted(
+        path.relative_to(root).as_posix()
+        for path in manifest_root.rglob("manifest.yaml")
+    ) if manifest_root.is_dir() else []
+    if not manifest_root.is_dir():
+        errors.append("SubAgents/: directory is required")
+    if set(registered_paths) != set(discovered_paths):
+        errors.append("Registry/subagents.yaml: registry entries do not cover all manifests exactly once")
+    manifests = [
+        manifest for path in registered_paths
+        if (manifest := _validate_manifest(root, path, manifest_schema, errors)) is not None
+    ]
+    default_profile = registry.get("default_profile")
+    indexed_active_ids = {
+        str(manifest.get("identity", {}).get("id"))
+        for manifest in manifests
+        if manifest.get("lifecycle") == "active" and isinstance(manifest.get("identity"), dict)
+    }
+    if default_profile not in indexed_active_ids:
+        errors.append("Registry/subagents.yaml: default_profile must reference an active registered SubAgent")
+    capabilities: list[str] = []
+    for manifest in manifests:
+        if manifest.get("lifecycle") != "active":
+            continue
+        for capability in manifest.get("capabilities", []):
+            if not isinstance(capability, dict):
+                continue
+            capabilities.extend(f"{capability.get('id')}.{operation}" for operation in capability.get("operations", []))
+    if len(set(capabilities)) != len(capabilities):
+        errors.append("active SubAgent runtime capabilities must be unique; UnityAgent resolves one profile per capability")
+    return errors
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", type=Path, default=ROOT, help="repository root to validate")
+    args = parser.parse_args(argv)
+    errors = validate_repository(args.repo_root.resolve())
+    if errors:
+        for message in errors:
+            print(f"[ERROR] {message}")
+        print(f"SubAgent Hub contract: {len(errors)} error(s)")
+        return 1
+    print("SubAgent Hub contract: 0 error(s)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

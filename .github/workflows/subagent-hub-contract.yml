@@ -1,0 +1,47 @@
+name: SubAgent Hub Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - Registry/**
+      - Schemas/**
+      - SubAgents/**
+      - Tests/Hub/**
+      - .github/workflows/subagent-hub-contract.yml
+  push:
+    branches: [main]
+    paths:
+      - Registry/**
+      - Schemas/**
+      - SubAgents/**
+      - Tests/Hub/**
+      - .github/workflows/subagent-hub-contract.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-hub:
+    name: Validate registry, manifests, and fail-closed invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install YAML validator dependency
+        run: python -m pip install --disable-pip-version-check pyyaml
+      - name: Validate every registered SubAgent manifest
+        run: python Tests/Hub/validate_registry.py
+      - name: Test Hub validation failures and multi-agent registration
+        run: python -m unittest discover -s Tests/Hub -p 'test_*.py' -v
+      - name: Export UnityAgent data-only profile snapshot
+        run: python Tests/Hub/export_agent_snapshot.py --output "$RUNNER_TEMP/subagent-catalog.yaml"
+      - name: Publish UnityAgent catalog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnityAgent-SubAgent-Catalog-Snapshot
+          path: ${{ runner.temp }}/subagent-catalog.yaml
+          retention-days: 90

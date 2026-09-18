@@ -1,7 +1,7 @@
-# UnityArtistCLI remote bootstrap installer.
+# ArtistSubAgent backend remote bootstrap installer.
 #
 # Intended usage from PowerShell:
-#   irm https://raw.githubusercontent.com/DarumaPPAP/UnityArtistCLI/main/scripts/install-remote.ps1 | iex
+#   irm https://raw.githubusercontent.com/DarumaPPAP/UnitySubAgentHub/main/scripts/install-remote.ps1 | iex
 #
 # Configuration is supplied through environment variables so the script remains usable
 # when it is piped into PowerShell. The release workflow publishes the archive and
@@ -22,7 +22,7 @@ if ($PSVersionTable.PSVersion.Major -eq 5 -and $PSVersionTable.PSVersion.Minor -
     }
 }
 
-$repository = "DarumaPPAP/UnityArtistCLI"
+$repository = "DarumaPPAP/UnitySubAgentHub"
 $requestedVersion = if ($env:UNITY_ARTIST_VERSION) { $env:UNITY_ARTIST_VERSION.Trim() } else { "v0.0.1-beta" }
 if ($requestedVersion -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
     throw "UNITY_ARTIST_VERSION must be a release tag such as v0.0.1-beta."

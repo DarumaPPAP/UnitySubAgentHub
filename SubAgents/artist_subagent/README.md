@@ -1,0 +1,125 @@
+# ArtistSubAgent User Guide
+
+Canonical identity, lifecycle, optional installation policy, compatibility, dependencies, activation gates, backend references, and evidence requirements are defined in [`manifest.yaml`](manifest.yaml). This guide describes the existing backend's workflow and CLI surface.
+
+ArtistSubAgent は、UnityAgent からのみ委譲される Visual Art / LookDev / Lighting / Environment / Camera / Cinematic / Timeline 専門SubAgentです。
+
+製品・専門Agentとしての正本名は `ArtistSubAgent`、runtime id は `artist_subagent` です。既存の `unity-artist` executable、`unity artist <command>` UX、`com.darumappap.unity-artist` UPM Package、`UnityArtist` namespace は **実行Backendの互換Surface** として維持します。
+
+## Resolver-visible profile boundary
+
+The current UnityAgent profile exposes only `artist.camera.inspect`, `artist.camera.refine`, and `visual.capture`. The full CLI command list below describes backend support; LookDev, cinematic, lighting/environment, evaluation, and other backend operations are not separate Resolver candidates until the Hub manifest declares them and UnityAgent supports their runtime profile.
+
+## Current contract
+
+```text
+UnityAgent (Architect / Commander / Loop Owner)
+  CapabilityRequest → Policy / Approval / Scope
+  → ArtistSubAgent eligibility / plan
+  → Backend Provider Registry → Resolver → Dispatcher
+  → unity_artist_cli backend
+  → official Unity CLI / Unity Pipeline
+  → ProviderResult → Evidence Normalizer → Persistence
+```
+
+ArtistSubAgentは第二のControl PlaneやProvider Registryを持ちません。`artist_subagent` が専門Agentのcanonical idであり、`unity_artist_cli` は現在のBackend Provider互換idです。
+
+## Activation
+
+ArtistSubAgentはoptionalです。Registryに登録されているだけでは利用可能になりません。[Manifest](manifest.yaml)に列挙されたBackend availability、互換性、Project binding、UPM Package、Pipeline reachabilityの各条件が観測できた場合だけUnityAgentの候補になります。falseまたはunknownはResolverから除外し、Capability解決を理由に自動インストールしません。
+
+ArtistSubAgentを導入する操作は、ユーザーが明示的にSetupを要求した場合だけ実行します。
+
+## Backend commands
+
+```text
+unity artist help
+unity-artist --help
+unity artist version --format json
+unity artist doctor --project-path <project> --format json --non-interactive
+unity artist capabilities --project-path <project> --format json
+unity artist install --project-path <project> --format json --non-interactive
+unity artist inspect|plan|preview|apply|capture|evaluate|refine|cinematic|history ...
+```
+
+`unity artist help` is the plugin help command and `unity-artist --help` is the standalone executable form. The installed Unity CLI beta currently intercepts `unity artist --help` as its own global help flag before plugin dispatch; this is recorded as an external CLI compatibility limitation rather than being presented as a successful Artist help invocation.
+
+Operational commands require an explicit project path and support `human`, `json`, and `ndjson` output. Mutation follows `Inspect → Plan → Exact Diff → Expected Revision → UnityAgent Approval → Apply → Evidence`; Apply never saves automatically and registers Unity Undo.
+
+Project paths are explicit for safe Editor targeting, but they do not need to be machine-specific absolute paths. Run from the Unity project root with `--project-path .`, or pass a repository-relative path such as `--project-path .\TestProjects\UnityArtistVerification-URP`. For repeatable external verification, the repository-provided script resolves the project and local Release host without changing the system PATH:
+
+```powershell
+# From this repository root; use the current directory when already inside a Unity project.
+.\scripts\verify-external-cli.ps1 -ProjectPath .\TestProjects\UnityArtistVerification-URP
+
+# From a real project root, no absolute user path is required.
+.\path\to\UnitySubAgentHub\scripts\verify-external-cli.ps1 -ProjectPath .
+```
+
+The script accepts `UNITY_ARTIST_PROJECT_PATH` and `UNITY_ARTIST_CLI_PATH` when a caller needs configuration outside the current directory. It resolves those values only at the process boundary; committed commands and evidence use logical fixture paths, not a developer's home directory.
+
+The Windows installer defaults to `%LOCALAPPDATA%\UnityArtistCLI\Beta`; the Unix installer defaults to `~/.local/lib/unity-artist/Beta`. Override the destination explicitly with `-InstallRoot` on PowerShell or the first argument on Unix when a different installation scope is required. The current ArtistSubAgent/backend release version is `0.0.1-beta`; `Beta` is the backend installation channel directory.
+
+For a Windows machine without a repository checkout, the published beta can be installed with a single PowerShell command:
+
+```powershell
+irm https://raw.githubusercontent.com/DarumaPPAP/UnitySubAgentHub/main/scripts/install-remote.ps1 | iex
+```
+
+This downloads the self-contained Windows host archive from the `v0.0.1-beta` GitHub Release, verifies its SHA-256 sidecar, installs it into `%LOCALAPPDATA%\UnityArtistCLI\Beta`, and verifies `unity-artist version`. The bootstrap does not require the .NET SDK/runtime, a Unity project, administrator privileges, or a source checkout. To pin the bootstrap itself to a release ref, use:
+
+```powershell
+irm https://raw.githubusercontent.com/DarumaPPAP/UnitySubAgentHub/v0.0.1-beta/scripts/install-remote.ps1 | iex
+```
+
+Set `UNITY_ARTIST_VERSION` or `UNITY_ARTIST_INSTALL_ROOT` before invoking the command when a different release or destination is required. The remote command becomes usable after the human-gated release workflow has published the matching host archive; the local checkout installer remains `.\scripts\install.ps1`.
+
+ArtistSubAgent does not expose generic GameObject/hierarchy CRUD, compile/test/build/play/stop/log operations, arbitrary evaluation, generic Addressables/UI/Audio control, or a second Control Plane. Those concerns stay with the official Unity CLI or the existing UnityAgent Provider chain.
+
+## Release matrix
+
+| Unity | Pipeline | Tier | Transport |
+|---|---|---|---|
+| 2022.3 LTS | Built-in | primary | official Unity CLI + Unity Pipeline |
+| Unity 6.x+ | Built-in | primary | official Unity CLI + Unity Pipeline |
+| Unity 6.x+ | URP | primary | official Unity CLI + Unity Pipeline |
+| Unity 6.x+ | HDRP | primary | official Unity CLI + Unity Pipeline |
+
+2022.3 URP/HDRP、Unity 2023、URP 14–16 は正式対応外です。2022.3 Built-in も最初に公式 CLI + Pipeline の実接続を検証します。今回のホストでは全列挙版が Unity 6.0 要件で具体的に失敗したため、その証跡後に限り、固定 `unity run` バッチ入口 `UnityArtist.UnityArtistBatchCommands.Dispatch` を限定フォールバックとして使用します。これは shared `ArtistSession` を再利用し、動的コード・MCP・汎用CRUD・自動保存を許可しません。
+
+## Verification
+
+```powershell
+dotnet build src/UnityArtist.Cli/UnityArtist.Cli.csproj
+python Tests/Release/verify_unity_artist_contract.py
+python Tests/Compatibility/verify-unity-api-compatibility.py
+python -m unittest Tests/Minimal/test_minimal_smoke_contract.py
+python Tests/Compatibility/verify-primary-urp-evidence.py
+python Tests/Compatibility/verify-cinematic-evidence.py
+python Tests/Compatibility/verify-hdrp-primary-evidence.py
+python Tests/Compatibility/verify-hdrp-cinematic-evidence.py
+```
+
+実 Editor / License / Pipeline 接続がない環境では、静的契約・CLI parser・unsupported preflight までを検証し、Direct Editor と E2E は `blocked_by_environment` として記録します。未観測を成功に昇格させません。現在は Unity 6 Built-in/URP/HDRP の live evidence と、Unity 2022.3 Built-in の「公式 Pipeline 全列挙版の gate failure → 固定バッチ fallback」evidence を個別の compatibility contract で検証しています。
+
+接続済みのUnity 6 Editorに対する最小ライブ検証は、`python scripts/run_minimal_live_smoke.py --project-path .\TestProjects\UnityArtistVerification` で実行できます。これは一つのCubeとMain Cameraだけを使い、Artistの計画・承認・適用・PNG capture・評価・Refine・履歴を短時間で検証します。結果は `Tests/Compatibility/unity6-builtin-minimal-smoke-evidence.yaml` に記録します。Editorの対象指定は常に呼び出し側で行い、固定のユーザー別絶対パスを前提にしません。
+
+## Migration
+
+旧 MyUnityMCP v1.1.1 の Package と Client Template は `Legacy/MyUnityMCP-1.1.1/` に履歴付きで保持します。v1.1.1 Tag は変更せず、新しい production surface に MCP transport や `McpForUnityTool` を再導入しません。詳細は [MIGRATION_FROM_MYUNITYMCP.md](../../MIGRATION_FROM_MYUNITYMCP.md) を参照してください。
+
+## Layout
+
+```text
+src/UnityArtist.Cli/                         # unity-artist host CLI
+Packages/com.darumappap.unity-artist/        # UnityArtist Editor API + optional Pipeline registrations
+Legacy/MyUnityMCP-1.1.1/Package/              # legacy package source, not production
+Tests/Compatibility/                         # matrix and compatibility gates
+Tests/Release/                               # production contract validators
+.agents/skills/artist-subagent-*/            # repo-scoped specialist workflows
+Legacy/MyUnityMCP-1.1.1/                     # immutable migration reference
+```
+
+UnityAgent owns the Codex marketplace and the only user-facing `unity-agent` plugin. ArtistSubAgent is not installed as a separate Codex plugin; this repository keeps only repo-scoped specialist workflows and backend implementation.
+
+MIT License. See [LICENSE](../../LICENSE).

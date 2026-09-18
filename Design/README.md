@@ -1,7 +1,7 @@
-# UnityArtistCLI design records
+# UnitySubAgentHub design records
 
-`Design/` contains decision records and bounded design notes for the current UnityArtistCLI cutover. The executable product contract is held by `Packages/com.darumappap.unity-artist/`, `Catalog/`, `Specs/UnityArtistCLI/`, `Tests/`, and `src/UnityArtist.Cli/`.
+`Design/` contains the architecture contract and decision records for the SubAgent registry. The canonical Hub index is `Registry/subagents.yaml`; each specialist's identity and lifecycle contract is in `SubAgents/<id>/manifest.yaml`; shared shapes are in `Schemas/`.
 
-Legacy MyUnityMCP creator designs and control-plane proposals are under `Legacy/MyUnityMCP-1.1.1/Design/` and remain migration references only. Design files do not imply runtime availability.
+UnityAgent remains the only Control Plane. Hub design records do not imply that a specialist is installed, eligible, or executable. Specialist-specific behavior and acceptance rules remain in the contracts linked by each manifest.
 
-When a design becomes executable, update the package, semantic Catalog, tests, documentation, compatibility contract, and release evidence in the same change.
+Legacy MyUnityMCP designs and control-plane proposals remain under `Legacy/MyUnityMCP-1.1.1/Design/` as migration references only. Do not change the published legacy tag.

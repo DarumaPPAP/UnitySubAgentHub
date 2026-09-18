@@ -1,6 +1,6 @@
-# UnityArtistCLI Unity Package
+# ArtistSubAgent Backend Unity Package
 
-This package registers the Unity Pipeline command adapter for UnityArtistCLI. It is Editor-only and intentionally focused on visual-art and cinematic workflows.
+This package is the Unity Editor backend surface used by ArtistSubAgent. It registers bounded Unity Pipeline commands and is not the SubAgent identity, a standalone agent, or a second Control Plane.
 
 Supported command registrations:
 
@@ -33,4 +33,4 @@ unity artist doctor --project-path <project> --format json --non-interactive
 unity artist install --project-path <project> --format json --non-interactive
 ```
 
-The package uses the four release cases documented in `Specs/UnityArtistCLI/spec.md` and rejects unsupported version/pipeline combinations before mutation.
+The package uses the four release cases documented in `Specs/ArtistSubAgent/spec.md` and rejects unsupported version/pipeline combinations before mutation.

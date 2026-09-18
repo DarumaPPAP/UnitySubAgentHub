@@ -1,18 +1,23 @@
-# UnityArtistCLI 0.0.1-beta Specification
+# ArtistSubAgent Backend Specification
 
 ## Product boundary
 
-UnityArtistCLI is the Artist specialist Provider. It handles visual intent inspection and planning, mood/lookdev, lighting, environment, sky/fog/reflection/GI, camera/depth/continuity, Cinemachine/TL cinematic planning, capture, human evaluation, and linked refinement. It does not become a general Unity editor API.
+ArtistSubAgent is the optional Artist specialist selected by UnityAgent. It handles visual intent inspection and planning, mood/lookdev, lighting, environment, sky/fog/reflection/GI, camera/depth/continuity, Cinemachine/Timeline cinematic planning, capture, human evaluation, and linked refinement. It does not become a general Unity editor API or a second Control Plane.
 
-The host executable is `unity-artist`; the command UX is `unity artist`; the UPM package is `com.darumappap.unity-artist`; the C# namespace is `UnityArtist`.
+The canonical Specialist identity, lifecycle, optional installation policy, capabilities, compatibility ranges, dependencies, activation gates, backend references, and evidence requirements are in the [ArtistSubAgent manifest](../../SubAgents/artist_subagent/manifest.yaml). The backend id `unity_artist_cli`, host executable `unity-artist`, command UX `unity artist`, UPM package `com.darumappap.unity-artist`, and C# namespace `UnityArtist` identify implementation compatibility surfaces; they are not the Specialist identity.
+
+## Current UnityAgent resolver profile
+
+The current snapshot exposes only `artist.camera.inspect`, `artist.camera.refine`, and `visual.capture`. The LookDev, cinematic, lighting/environment, evaluation, and other operations described in this backend specification are not independent Resolver candidates until the Hub manifest explicitly registers them and UnityAgent supports their runtime profile.
 
 ## Transport and layering
 
 ```text
 UnityAgent CapabilityRequest
   → Runtime Guard / Policy / Approval / Mutation Scope
-  → Provider Registry / Resolver / Dispatcher
-  → unity_artist_cli Provider Adapter
+  → ArtistSubAgent eligibility / plan
+  → Backend Provider Registry / Resolver / Dispatcher
+  → unity_artist_cli backend adapter
   → unity-artist
   → official Unity CLI command
   → Unity Pipeline [CliCommand]
@@ -24,7 +29,11 @@ The adapter accepts typed argv only, always supplies an explicit project path, u
 
 For Unity 2022.3 LTS + Built-in, the host always probes the Official Unity CLI/Pipeline install first. Only the recorded Unity 6.0-or-later Pipeline compatibility failure selects the bounded `official_unity_cli_bounded_batch_fallback`: `unity run` invokes the fixed `UnityArtist.UnityArtistBatchCommands.Dispatch` method with base64-encoded structured JSON and a single JSON response file. The bridge reuses `ArtistSession`, allowlists the Artist commands, loads an exact scene, and does not auto-save or persist approval tokens. It is not a second Player Framework, MCP transport, dynamic-code executor, or generic Unity CRUD surface.
 
-## Command contract
+## Activation contract
+
+ArtistSubAgent is optional and must never be auto-installed by capability resolution. Its canonical gates are listed in the [manifest](../../SubAgents/artist_subagent/manifest.yaml); backend availability, compatibility, explicit Project binding, Artist UPM package installation, and Pipeline reachability must all be observed true. False or unknown activation facts exclude ArtistSubAgent before ranking or execution. Setup is an explicit operation initiated by the user.
+
+## Backend command contract
 
 Required commands are `help`, `version`, `doctor`, `capabilities`, `install`, `inspect`, `plan`, `preview`, `apply`, `capture`, `evaluate`, `refine`, `history`; `cinematic` is the explicit Timeline/Cinemachine specialist extension. Operational commands support `--project-path`, `--format human|json|ndjson`, `--non-interactive`, and `--verbose`. `unity artist help` and standalone `unity-artist --help` are the supported help entrypoints; the Unity CLI beta's global `unity artist --help` form is host-intercepted before plugin dispatch and is tracked as an external compatibility limitation.
 
@@ -53,10 +62,10 @@ The semantic surface includes LookDev and visual direction, Lighting, Environmen
 | Unity 6.x+ | URP | `urp_native_api` | primary |
 | Unity 6.x+ | HDRP | `hdrp_native_api` | primary |
 
-The 2022.3 row is verified with the official Unity CLI + Unity Pipeline first, followed by the bounded batch fallback after the observed concrete compatibility failure. 2022.3 URP/HDRP, Unity 2023, and URP 14–16 are rejected before mutation with a typed unsupported result.
+The manifest lists exact supported version/pipeline pairs rather than a cross product: 2022.3 LTS supports Built-in only; Unity 6.x+ supports Built-in, URP, and HDRP. The 2022.3 row is verified with the official Unity CLI + Unity Pipeline first, followed by the bounded batch fallback after the observed concrete compatibility failure. 2022.3 URP/HDRP, Unity 2023, and URP 14–16 are rejected before mutation with a typed unsupported result.
 
 ## Error and terminal states
 
-The host uses structured codes including `PROJECT_PATH_REQUIRED`, `UNITY_CLI_UNAVAILABLE`, `PIPELINE_INSTALL_FAILED`, `CAPABILITY_UNAVAILABLE`, `UNSUPPORTED_UNITY_VERSION`, `UNSUPPORTED_RENDER_PIPELINE_VERSION`, `STALE_REVISION`, `APPROVAL_REQUIRED`, `PLAN_ID_REQUIRED`, `CAMERA_NOT_FOUND`, `INVALID_REVIEW_DECISION`, `TIMEOUT`, and `ARTIST_PIPELINE_COMMAND_FAILED`.
+The ArtistSubAgent backend uses structured codes including `PROJECT_PATH_REQUIRED`, `UNITY_CLI_UNAVAILABLE`, `PIPELINE_INSTALL_FAILED`, `CAPABILITY_UNAVAILABLE`, `UNSUPPORTED_UNITY_VERSION`, `UNSUPPORTED_RENDER_PIPELINE_VERSION`, `STALE_REVISION`, `APPROVAL_REQUIRED`, `PLAN_ID_REQUIRED`, `CAMERA_NOT_FOUND`, `INVALID_REVIEW_DECISION`, `TIMEOUT`, and `ARTIST_PIPELINE_COMMAND_FAILED`.
 
-Evidence terminal states are `verified`, `partial_verified`, and `blocked_by_environment`; `implemented_unverified` is not a completion state. The 2022.3 bounded fixture uses `verified_for_fixture` inside its evidence record and is rolled up to the release audit separately from the remaining host-level limitations.
+Evidence artifact requirements and terminal states are declared by the [manifest](../../SubAgents/artist_subagent/manifest.yaml) and its linked release-verification contract. `implemented_unverified` is not a completion state. The 2022.3 bounded fixture uses `verified_for_fixture` inside its evidence record and is rolled up to the release audit separately from the remaining host-level limitations.

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://darumappap.github.io/UnitySubAgentHub/schemas/subagent-registry.schema.json",
+  "title": "UnityAgent SubAgent Registry",
+  "description": "An index of SubAgent manifests. The Hub stores and validates metadata; UnityAgent owns resolution and execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "control_plane", "runtime", "resolution", "default_profile", "entries"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "kind": { "const": "subagent_registry" },
+    "control_plane": { "const": "unity_agent" },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owns_execution", "owns_resolution", "auto_install"],
+      "properties": {
+        "owns_execution": { "const": false },
+        "owns_resolution": { "const": false },
+        "auto_install": { "const": false }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase_order", "eligible_lifecycle", "unknown_behavior", "unavailable_behavior", "auto_install"],
+      "properties": {
+        "phase_order": {
+          "const": ["registered", "discovered", "installed", "compatible", "project_bound", "available", "eligible", "ranked"]
+        },
+        "eligible_lifecycle": { "const": "active" },
+        "unknown_behavior": { "const": "exclude_from_resolution" },
+        "unavailable_behavior": { "const": "exclude_from_resolution" },
+        "auto_install": { "const": false }
+      }
+    },
+    "default_profile": { "type": "string", "pattern": "^[a-z][a-z0-9_]*_subagent$" },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["manifest"],
+        "properties": {
+          "manifest": { "type": "string", "pattern": "^SubAgents/[a-z][a-z0-9_]*_subagent/manifest\\.yaml$" }
+        }
+      }
+    }
+  }
+}

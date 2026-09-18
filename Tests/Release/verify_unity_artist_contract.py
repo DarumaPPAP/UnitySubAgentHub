@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Canonical static contract gate for UnityArtistCLI 0.0.1-beta."""
+"""Canonical static contract gate for ArtistSubAgent 0.0.1-beta."""
 from __future__ import annotations
 
 import json
@@ -18,9 +18,10 @@ CLI_SOURCE = ROOT / "src/UnityArtist.Cli/Program.cs"
 EDITOR_ROOT = ROOT / "Packages/com.darumappap.unity-artist/Editor"
 MATRIX_PATH = ROOT / "Tests/Compatibility/support-matrix.yaml"
 GATE_EVIDENCE_PATH = ROOT / "Tests/Compatibility/cli-pipeline-gate-evidence.yaml"
-CATALOG_PATH = ROOT / "Catalog/unity-artist-catalog.yaml"
-SURFACE_PATH = ROOT / "Catalog/production-surface-contract.yaml"
-PLUGIN_ROOT = ROOT / ".agents/plugins/unity-artist"
+MANIFEST_PATH = ROOT / "SubAgents/artist_subagent/manifest.yaml"
+SURFACE_PATH = ROOT / "SubAgents/artist_subagent/contracts/backend-surface-contract.yaml"
+REPO_SKILLS_ROOT = ROOT / ".agents/skills"
+LEGACY_PLUGIN_ROOT = ROOT / ".agents/plugins/unity-artist"
 
 REQUIRED_COMMANDS = {
     "help", "version", "doctor", "capabilities", "install", "inspect", "plan",
@@ -164,29 +165,73 @@ def check_cli_pipeline_gate_evidence(errors: list[str]) -> None:
 
 
 def check_catalog(errors: list[str]) -> None:
-    catalog = read_yaml(errors, CATALOG_PATH)
+    manifest = read_yaml(errors, MANIFEST_PATH)
     surface = read_yaml(errors, SURFACE_PATH)
-    if catalog.get("product") != "UnityArtistCLI" or surface.get("product") != "UnityArtistCLI":
-        error(errors, "Catalog product identity is not UnityArtistCLI")
-    if catalog.get("release_version") != "0.0.1-beta" or surface.get("release_version") != "0.0.1-beta":
-        error(errors, "Catalog release version is not 0.0.1-beta")
-    if surface.get("commands") and set(surface["commands"]) != REQUIRED_COMMANDS:
-        error(errors, "production surface command set disagrees with CLI contract")
-    if surface.get("mcp_transport") is not False or surface.get("second_player_framework") is not False:
-        error(errors, "production surface must explicitly disable MCP transport and second Player framework")
+    identity = manifest.get("identity") or {}
+    if manifest.get("kind") != "subagent_manifest" or identity.get("name") != "ArtistSubAgent":
+        error(errors, "canonical ArtistSubAgent manifest identity is invalid")
+    if identity.get("id") != "artist_subagent" or identity.get("version") != "0.0.1-beta":
+        error(errors, "canonical SubAgent id or release version is invalid")
+    if manifest.get("lifecycle") != "active":
+        error(errors, "ArtistSubAgent manifest must remain active")
+    install = manifest.get("installation") or {}
+    if install.get("mode") != "optional" or install.get("required") is not False or install.get("auto_install") is not False:
+        error(errors, "ArtistSubAgent must remain optional and no-auto-install")
+    activation = manifest.get("activation") or {}
+    if activation.get("false_behavior") != "exclude_from_resolution" or activation.get("unknown_behavior") != "exclude_from_resolution":
+        error(errors, "false or unknown ArtistSubAgent activation must be excluded from resolution")
+    compatibility = manifest.get("compatibility") or {}
+    targets = compatibility.get("supported_targets") or []
+    actual_targets = {
+        (str(target.get("unity_version")), str(target.get("render_pipeline")))
+        for target in targets if isinstance(target, dict)
+    }
+    if actual_targets != EXPECTED_ROWS:
+        error(errors, "manifest supported version/pipeline pairs disagree with the Artist release matrix")
+    backends = manifest.get("backends") or []
+    primary = [backend for backend in backends if backend.get("primary") is True]
+    if len(primary) != 1 or primary[0].get("id") != "unity_artist_cli" or primary[0].get("id") == identity.get("id"):
+        error(errors, "unity_artist_cli must remain a distinct primary backend id")
+    if surface.get("kind") != "specialist_backend_surface_contract":
+        error(errors, "Artist backend surface contract kind is invalid")
+    if surface.get("backend_commands") and set(surface["backend_commands"]) != REQUIRED_COMMANDS:
+        error(errors, "backend command set disagrees with CLI contract")
+    forbidden = set(surface.get("forbidden_surface") or [])
+    if not {"mcp_transport", "generic_gameobject_crud", "generic_hierarchy_crud", "arbitrary_eval"}.issubset(forbidden):
+        error(errors, "backend surface must continue to forbid MCP and generic CRUD/eval")
+    if surface.get("automatic_save") is not False or surface.get("arbitrary_eval") is not False:
+        error(errors, "Artist backend surface must disable automatic save and arbitrary eval")
 
-
-def check_plugins(errors: list[str]) -> None:
-    for manifest in (PLUGIN_ROOT / "plugin.json", PLUGIN_ROOT / ".codex-plugin/plugin.json"):
-        value = read_json(errors, manifest)
-        if value.get("name") != "unity-artist":
-            error(errors, f"plugin manifest has wrong name: {manifest.relative_to(ROOT)}")
-        if value.get("version") != "0.0.1-beta":
-            error(errors, f"plugin manifest version mismatch: {manifest.relative_to(ROOT)}")
-    if any(path.name == ".mcp.json" for path in PLUGIN_ROOT.rglob("*")):
-        error(errors, "UnityArtist plugin must not contain .mcp.json")
-    if not any(PLUGIN_ROOT.rglob("SKILL.md")):
-        error(errors, "UnityArtist plugin must provide at least one skill")
+def check_agent_distribution(errors: list[str]) -> None:
+    if LEGACY_PLUGIN_ROOT.exists():
+        error(errors, "standalone .agents/plugins/unity-artist surface must be removed")
+    expected = {
+        "artist-subagent-cinematic-evidence",
+        "artist-subagent-lookdev-refine",
+        "artist-subagent-backend-setup",
+    }
+    actual = {
+        path.parent.name
+        for path in REPO_SKILLS_ROOT.rglob("SKILL.md")
+        if path.parent.name.startswith("artist-subagent-")
+    } if REPO_SKILLS_ROOT.is_dir() else set()
+    missing = sorted(expected - actual)
+    if missing:
+        error(errors, f"repo-scoped ArtistSubAgent skills are missing: {missing}")
+    production_roots = [
+        ROOT / ".agents",
+        ROOT / "Catalog",
+        ROOT / "Specs",
+        ROOT / "Packages",
+        ROOT / "src",
+    ]
+    if any(
+        path.name == ".mcp.json"
+        for production_root in production_roots
+        if production_root.exists()
+        for path in production_root.rglob("*")
+    ):
+        error(errors, "ArtistSubAgent production surface must not contain .mcp.json")
 
 
 def check_legacy_anchor(errors: list[str]) -> None:
@@ -213,9 +258,9 @@ def main() -> int:
     check_matrix(errors)
     check_cli_pipeline_gate_evidence(errors)
     check_catalog(errors)
-    check_plugins(errors)
+    check_agent_distribution(errors)
     check_legacy_anchor(errors)
-    print(f"UnityArtistCLI production contract: {len(errors)} error(s)")
+    print(f"ArtistSubAgent production contract: {len(errors)} error(s)")
     return 1 if errors else 0
 
 
