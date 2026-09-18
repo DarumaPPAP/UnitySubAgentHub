@@ -164,6 +164,30 @@ class RegistryValidatorTests(unittest.TestCase):
 
         self.assertTrue(any("backend dependency" in error and "missing_backend" in error for error in errors))
 
+    def test_primary_backend_must_have_a_required_dependency_gate(self) -> None:
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        path = self.root / "SubAgents/artist_subagent/manifest.yaml"
+        value = __import__("yaml").safe_load(path.read_text(encoding="utf-8"))
+        value["dependencies"] = []
+        path.write_text(__import__("yaml").safe_dump(value, sort_keys=False), encoding="utf-8")
+        self.write_registry()
+
+        errors = validate_repository(self.root)
+
+        self.assertTrue(any("primary backend" in error and "required dependency" in error for error in errors))
+
+    def test_malformed_required_dependency_gate_is_reported_without_crashing(self) -> None:
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        path = self.root / "SubAgents/artist_subagent/manifest.yaml"
+        value = __import__("yaml").safe_load(path.read_text(encoding="utf-8"))
+        value["dependencies"][0]["eligibility_gate"] = ["backend_available"]
+        path.write_text(__import__("yaml").safe_dump(value, sort_keys=False), encoding="utf-8")
+        self.write_registry()
+
+        errors = validate_repository(self.root)
+
+        self.assertTrue(any("dependencies[0].eligibility_gate" in error for error in errors))
+
     def test_backend_id_must_be_distinct_from_subagent_id(self) -> None:
         self.add_manifest("artist_subagent", "artist_subagent")
         self.write_registry()

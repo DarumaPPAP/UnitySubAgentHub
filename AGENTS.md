@@ -20,7 +20,7 @@ This repository owns the SubAgent registry, shared schemas, per-specialist manif
 
 ## Adding a specialist
 
-Create one `SubAgents/<id>/manifest.yaml` that satisfies `Schemas/subagent-manifest.schema.json`, then add its path to `Registry/subagents.yaml`. Keep the manifest's backend ids separate from its specialist id. Use stable resolver-visible capability ids and declare exact supported Unity-version/render-pipeline pairs, dependencies, backend refs, and evidence refs. A new entry using the shared contract must not require UnityAgent source changes.
+Create one `SubAgents/<id>/manifest.yaml` that satisfies `Schemas/subagent-manifest.schema.json`, then add its path to `Registry/subagents.yaml`. Keep the manifest's backend ids separate from its specialist id. Use stable resolver-visible capability ids and declare exact supported Unity-version/render-pipeline pairs, dependencies, backend refs, and evidence refs. Every required dependency, including the primary backend, must have a gate in `activation.required_before_resolution`. A new entry using the shared contract must not require UnityAgent source changes.
 
 Do not add runtime dispatch, candidate ranking, local environment discovery, package installation, or project mutation to this repository's Hub validation path. New manifest paths must be covered by the shared validator and CI.
 

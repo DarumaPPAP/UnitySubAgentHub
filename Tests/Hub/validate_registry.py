@@ -302,6 +302,20 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
     primary_backends = [backend for backend in backends if isinstance(backend, dict) and backend.get("primary") is True]
     if len(primary_backends) != 1:
         errors.append(f"{path}: exactly one primary backend is required for UnityAgent profile export")
+    active_gates = set(gates) if isinstance(gates, list) else set()
+    for backend in primary_backends:
+        backend_id = backend.get("id")
+        has_required_gate = any(
+            isinstance(dependency, dict)
+            and dependency.get("kind") == "backend"
+            and dependency.get("id") == backend_id
+            and dependency.get("required") is True
+            and isinstance(dependency.get("eligibility_gate"), str)
+            and dependency.get("eligibility_gate") in active_gates
+            for dependency in dependencies
+        )
+        if not has_required_gate:
+            errors.append(f"{path}: primary backend {backend_id!r} must have a required dependency gate in activation")
 
     runtime_profile = manifest.get("runtime_profile")
     if isinstance(runtime_profile, dict):

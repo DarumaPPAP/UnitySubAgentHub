@@ -40,7 +40,7 @@ Each manifest declares its own environment gates. Runtime observations such as i
 ## Adding a specialist
 
 1. Create `SubAgents/<id>/manifest.yaml` using `Schemas/subagent-manifest.schema.json`.
-2. Declare optional installation and `auto_install: false`; list all activation checks and fail-closed behavior.
+2. Declare optional installation and `auto_install: false`; list all activation checks and fail-closed behavior. Every required dependency, including the primary backend, must have a gate listed in `activation.required_before_resolution`.
 3. Declare resolver-visible capabilities, exact supported version/pipeline target pairs, dependencies, backend references, evidence requirements, and lifecycle. Do not encode compatibility as independent version and pipeline arrays when the support matrix excludes some combinations.
 4. Add only the manifest path to `Registry/subagents.yaml`.
 5. Run `python Tests/Hub/validate_registry.py` and `python -m unittest discover -s Tests/Hub -p 'test_*.py'`.

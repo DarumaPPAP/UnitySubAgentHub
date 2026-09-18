@@ -44,7 +44,7 @@ registered → discovered → installed → compatible → project_bound
 ## 新しいSubAgentの追加
 
 1. `Schemas/subagent-manifest.schema.json` に従って `SubAgents/<id>/manifest.yaml` を作ります。
-2. Optional導入、`auto_install: false`、Fail-Closed有効化条件、Resolver-visible Capability、正確なUnity version/render pipelineの組み合わせ、依存条件、Backend、Evidenceを定義します。
+2. Optional導入、`auto_install: false`、Fail-Closed有効化条件、Resolver-visible Capability、正確なUnity version/render pipelineの組み合わせ、依存条件、Backend、Evidenceを定義します。必須依存（primary backendを含む）には、それぞれ`activation.required_before_resolution`に含まれるeligibility gateを設定します。
 3. Manifestのパスだけを `Registry/subagents.yaml` に追加します。
 4. 次を実行します。
 
