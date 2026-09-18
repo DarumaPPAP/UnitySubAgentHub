@@ -1,9 +1,10 @@
-# UnityArtistCLI host contract tests
+# unity-artist Host CLI Contract Tests
 
-These tests exercise the independent `unity-artist` executable without requiring a
-licensed Editor. They assert the JSON envelope, exact release matrix, approval
-preconditions, and the required Unity 2022.3 Built-in versus URP preflight.
+このSuiteは、Unity Editor Licenseを必要とせずに`unity-artist` Host ExecutableのContractを検証します。
 
-The test intentionally does not claim connected Editor or Pipeline success. That
-evidence is collected by the Unity Editor matrix workflow when a licensed fixture is
-available.
+- JSON Response Envelope
+- Exact Release Matrix
+- Approvalの前提条件
+- Unity 2022.3 Built-inとURPの事前Compatibility判定
+
+Host Testが成功しても、Connected Editor / Unity Pipelineでの実行成功は意味しません。Direct EditorやE2EのEvidenceは、Licensed Fixtureを使用するEditor Matrix Workflowと`Tests/Compatibility/`で確認します。

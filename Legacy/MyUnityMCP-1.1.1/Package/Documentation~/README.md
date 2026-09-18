@@ -1,4 +1,6 @@
-# MyUnityMCP Documentation
+# MyUnityMCP v1.1.1 Legacy Documentation
+
+このページは`Legacy/MyUnityMCP-1.1.1/Package/Documentation~/`に保存された旧MyUnityMCP Editor PackageのDocumentation Indexです。現在のUnitySubAgentHub、ArtistSubAgent、UnityAgent Control Planeの操作手順ではありません。
 
 ## Start here
 
@@ -22,4 +24,4 @@
 - [Upgrade Guide](upgrade-guide.md)
 - [Known Issues](known-issues.md)
 
-MyUnityMCP v1.1.0はUnity Editor専用です。Player／Target Device上でのTool実行はCurrent Release Surfaceの対象外です。
+MyUnityMCP v1.1.1はUnity Editor専用の旧Packageです。Player / Target Device上でToolを実行するCurrent Release Surfaceではありません。
