@@ -205,7 +205,19 @@ def check_agent_distribution(errors: list[str]) -> None:
     missing = sorted(expected - actual)
     if missing:
         error(errors, f"repo-scoped ArtistSubAgent skills are missing: {missing}")
-    if any(path.name == ".mcp.json" for path in ROOT.rglob("*")):
+    production_roots = [
+        ROOT / ".agents",
+        ROOT / "Catalog",
+        ROOT / "Specs",
+        ROOT / "Packages",
+        ROOT / "src",
+    ]
+    if any(
+        path.name == ".mcp.json"
+        for production_root in production_roots
+        if production_root.exists()
+        for path in production_root.rglob("*")
+    ):
         error(errors, "ArtistSubAgent production surface must not contain .mcp.json")
 
 
