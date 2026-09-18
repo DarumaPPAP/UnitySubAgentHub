@@ -302,7 +302,7 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
     primary_backends = [backend for backend in backends if isinstance(backend, dict) and backend.get("primary") is True]
     if len(primary_backends) != 1:
         errors.append(f"{path}: exactly one primary backend is required for UnityAgent profile export")
-    active_gates = set(gates) if isinstance(gates, list) else set()
+    active_gates = {gate for gate in gates if isinstance(gate, str)} if isinstance(gates, list) else set()
     for backend in primary_backends:
         backend_id = backend.get("id")
         has_required_gate = any(

@@ -188,6 +188,18 @@ class RegistryValidatorTests(unittest.TestCase):
 
         self.assertTrue(any("dependencies[0].eligibility_gate" in error for error in errors))
 
+    def test_malformed_activation_gate_is_reported_without_crashing(self) -> None:
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        path = self.root / "SubAgents/artist_subagent/manifest.yaml"
+        value = __import__("yaml").safe_load(path.read_text(encoding="utf-8"))
+        value["activation"]["required_before_resolution"] = [["backend_available"]]
+        path.write_text(__import__("yaml").safe_dump(value, sort_keys=False), encoding="utf-8")
+        self.write_registry()
+
+        errors = validate_repository(self.root)
+
+        self.assertTrue(any("activation.required_before_resolution" in error for error in errors))
+
     def test_backend_id_must_be_distinct_from_subagent_id(self) -> None:
         self.add_manifest("artist_subagent", "artist_subagent")
         self.write_registry()
