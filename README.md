@@ -41,8 +41,8 @@ Registry登録は、installed / compatible / project-bound / available / eligibl
 
 ```mermaid
 flowchart LR
-    U[User / Unity UI / Codex] --> A[UnityAgent\nControl Plane]
-    H[UnitySubAgentHub\nRegistry / Manifest / Validation] -. metadata / snapshot .-> A
+    U[User / Unity UI / Codex] --> A["UnityAgent<br/>Control Plane"]
+    H["UnitySubAgentHub<br/>Registry / Manifest / Validation"] -. metadata / snapshot .-> A
     A --> S[Eligible Specialist SubAgent]
     S --> B[Specialist Backend / Provider]
     B --> E[Evidence]
