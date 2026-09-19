@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import yaml
+
 from validate_registry import validate_repository
 
 
@@ -73,6 +75,15 @@ class RegistryValidatorTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
+
+    def test_checked_in_artist_producer_matches_current_unityagent_reference_contract(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        manifest = yaml.safe_load((root / "SubAgents/artist_subagent/manifest.yaml").read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            manifest["evidence"]["runtime_provenance"]["producer"],
+            "UnityAgent.ReferenceImplementation.v1.1",
+        )
 
     def write_registry(self) -> None:
         entries = "\n".join(f"  - manifest: {path}" for path in self.manifests)

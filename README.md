@@ -153,6 +153,8 @@ UnityAgent `main` は、現在Repository内の `Runtime/ReferenceImplementation/
 
 したがって、**Artifact公開 != UnityAgent Runtimeへ同期済み** です。HubとUnityAgentのProfile contractを変更するときは、両Repositoryで同時に検証してください。
 
+Artistの現行runtime provenanceは `UnityAgent.ReferenceImplementation.v1.1` です。Consumer側が別Revisionを持つ場合、Snapshotを自動補正せず、契約差分としてImport Gateでブロックします。Compatibility Factの生成・観測はHubでは行わず、UnityAgentのEnvironment discoveryが担当します。
+
 ## Add a Specialist
 
 1. `Schemas/subagent-manifest.schema.json` に従って `SubAgents/<id>/manifest.yaml` を作成します。
