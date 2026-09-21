@@ -95,7 +95,7 @@ evidence:
   runtime_types: [mutation_diff, editor_observation, visual_capture]
   runtime_provenance:
     source_type: artist_subagent_reference
-    producer: UnityAgent.ReferenceImplementation.v1
+    producer: UnityAgent.ReferenceImplementation.v1.1
     provenance_token: artist_subagent
   terminal_states: [verified, partial_verified, blocked_by_environment, unavailable]
   contract_ref: Tests/Compatibility/release-verification.yaml
