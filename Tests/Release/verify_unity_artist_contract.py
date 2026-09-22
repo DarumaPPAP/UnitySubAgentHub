@@ -18,6 +18,7 @@ CLI_SOURCE = ROOT / "src/UnityArtist.Cli/Program.cs"
 EDITOR_ROOT = ROOT / "Packages/com.darumappap.unity-artist/Editor"
 MATRIX_PATH = ROOT / "Tests/Compatibility/support-matrix.yaml"
 GATE_EVIDENCE_PATH = ROOT / "Tests/Compatibility/cli-pipeline-gate-evidence.yaml"
+CLI_REFERENCE_AUDIT_PATH = ROOT / "Tests/Compatibility/unity-cli-reference-audit.yaml"
 MANIFEST_PATH = ROOT / "SubAgents/artist_subagent/manifest.yaml"
 SURFACE_PATH = ROOT / "SubAgents/artist_subagent/contracts/backend-surface-contract.yaml"
 REPO_SKILLS_ROOT = ROOT / ".agents/skills"
@@ -164,6 +165,37 @@ def check_cli_pipeline_gate_evidence(errors: list[str]) -> None:
         error(errors, "2022.3 bounded fallback selection/evidence is incomplete")
 
 
+def check_cli_reference_audit(errors: list[str]) -> None:
+    audit = read_yaml(errors, CLI_REFERENCE_AUDIT_PATH)
+    if audit.get("schema_version") != "1.0":
+        error(errors, "Unity CLI reference audit schema version must be 1.0")
+    if audit.get("documented_release") != "1.0.0-beta.10":
+        error(errors, "Unity CLI reference audit must record the current documented release")
+    observation = audit.get("runtime_observation") or {}
+    if observation.get("status") != "not_observed" or observation.get("historical_evidence_preserved") is not True:
+        error(errors, "Unity CLI reference audit must distinguish documentation from runtime observation")
+    required_urls = {
+        "https://docs.unity.com/en-us/unity-cli",
+        "https://docs.unity.com/en-us/unity-cli/unity-cli-reference",
+        "https://docs.unity.com/en-us/unity-cli/release-notes",
+        "https://docs.unity.com/en-us/unity-production-pipeline/local-tools-cli/unity-pipeline-package",
+    }
+    actual_urls = {
+        str(source.get("url"))
+        for source in audit.get("sources", [])
+        if isinstance(source, dict)
+    }
+    missing_urls = sorted(required_urls - actual_urls)
+    if missing_urls:
+        error(errors, f"Unity CLI reference audit is missing official sources: {missing_urls}")
+    scope = audit.get("audit_scope") or {}
+    forbidden_hub_ownership = {"runtime_execution", "resolver", "installer", "environment_observation", "automatic_installation"}
+    if not forbidden_hub_ownership.issubset(set(scope.get("hub_does_not_own") or [])):
+        error(errors, "Unity CLI reference audit weakens the Hub boundary")
+    if "1.0.0-beta.8" not in set(scope.get("historical_versions_to_preserve") or []):
+        error(errors, "historical beta.8 evidence must remain explicitly preserved")
+
+
 def check_catalog(errors: list[str]) -> None:
     manifest = read_yaml(errors, MANIFEST_PATH)
     surface = read_yaml(errors, SURFACE_PATH)
@@ -257,6 +289,7 @@ def main() -> int:
     check_editor_surface(errors)
     check_matrix(errors)
     check_cli_pipeline_gate_evidence(errors)
+    check_cli_reference_audit(errors)
     check_catalog(errors)
     check_agent_distribution(errors)
     check_legacy_anchor(errors)

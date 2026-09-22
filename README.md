@@ -15,7 +15,8 @@
   <a href="#registry">Registry</a> ·
   <a href="#eligibility">Eligibility</a> ·
   <a href="#add-a-specialist">Add a Specialist</a> ·
-  <a href="Design/subagent-hub-architecture.md">Architecture</a>
+  <a href="Design/subagent-hub-architecture.md">Architecture</a> ·
+  <a href="docs/references/unity-cli-reference.md">Unity CLI Reference</a>
 </p>
 
 > [!IMPORTANT]
