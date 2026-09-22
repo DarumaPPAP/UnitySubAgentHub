@@ -106,7 +106,7 @@ class RegistryValidatorTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         workflow = (root / ".github/workflows/release-gate.yml").read_text(encoding="utf-8")
 
-        self.assertRegex(workflow, r"(?m)^\\s*- SubAgents/\\*\\*\\s*$")
+        self.assertIn("      - SubAgents/**\\n", workflow)
 
     def test_checked_in_artist_producer_matches_current_unityagent_reference_contract(self) -> None:
         root = Path(__file__).resolve().parents[2]
