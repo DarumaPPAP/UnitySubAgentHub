@@ -28,9 +28,34 @@ SUPPORTED_SCHEMA_KEYWORDS = {
 }
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """Reject ambiguous YAML mappings at the canonical contract boundary."""
+
+
+def _construct_unique_mapping(loader: yaml.SafeLoader, node: yaml.Node, deep: bool = False) -> dict[Any, Any]:
+    mapping: dict[Any, Any] = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping",
+                node.start_mark,
+                f"duplicate YAML key: {key!r}",
+                key_node.start_mark,
+            )
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+_UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    _construct_unique_mapping,
+)
+
+
 def _read_yaml(path: Path, errors: list[str]) -> Any:
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8"))
+        return yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
     except FileNotFoundError:
         errors.append(f"missing YAML file: {path}")
     except (OSError, yaml.YAMLError) as exc:
