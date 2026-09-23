@@ -76,6 +76,48 @@ class RegistryValidatorTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    def test_duplicate_yaml_keys_are_rejected_in_registry(self) -> None:
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        self.write_registry()
+        path = self.root / "Registry/subagents.yaml"
+        text = path.read_text(encoding="utf-8")
+        key = "  unknown_behavior: exclude_from_resolution\n"
+        self.assertIn(key, text)
+        path.write_text(text.replace(key, "  unknown_behavior: allow\n" + key, 1), encoding="utf-8")
+
+        errors = validate_repository(self.root)
+
+        self.assertTrue(any("duplicate YAML key" in error for error in errors))
+
+    def test_duplicate_yaml_keys_are_rejected_in_manifest(self) -> None:
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        self.write_registry()
+        path = self.root / "SubAgents/artist_subagent/manifest.yaml"
+        text = path.read_text(encoding="utf-8")
+        key = "  unknown_behavior: exclude_from_resolution\n"
+        self.assertIn(key, text)
+        path.write_text(text.replace(key, "  unknown_behavior: allow\n" + key, 1), encoding="utf-8")
+
+        errors = validate_repository(self.root)
+
+        self.assertTrue(any("duplicate YAML key" in error for error in errors))
+
+    def test_hub_governance_changes_trigger_contract_validation(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        workflow = yaml.load(
+            (root / ".github/workflows/subagent-hub-contract.yml").read_text(encoding="utf-8"),
+            Loader=yaml.BaseLoader,
+        )
+
+        for event in ("pull_request", "push"):
+            self.assertIn("AGENTS.md", workflow["on"][event]["paths"])
+
+    def test_release_gate_covers_canonical_manifest_changes(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / ".github/workflows/release-gate.yml").read_text(encoding="utf-8")
+
+        self.assertIn("      - SubAgents/**", workflow)
+
     def test_checked_in_artist_producer_matches_current_unityagent_reference_contract(self) -> None:
         root = Path(__file__).resolve().parents[2]
         manifest = yaml.safe_load((root / "SubAgents/artist_subagent/manifest.yaml").read_text(encoding="utf-8"))
