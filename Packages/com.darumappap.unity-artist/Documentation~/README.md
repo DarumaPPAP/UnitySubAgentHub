@@ -30,7 +30,7 @@ Unity 6 URPでは、Intentに`setVolumeLookDev: true`、`volumePostExposure`、`
 
 ## Host CLI
 
-Repository RootからHost CLIを利用できます。
+Repository RootからHost CLIを利用できます。UnityAgent連携の導入はUnityAgent Control Planeの`doctor → setup plan → approval → setup apply → doctor`を入口とします。以下はBackend固有のCLIであり、UnityAgentの承認済みSetup Planの代替ではありません。
 
 ```text
 unity artist doctor --project-path <project> --format json --non-interactive

@@ -110,7 +110,11 @@ class RegistryValidatorTests(unittest.TestCase):
         )
 
         for event in ("pull_request", "push"):
-            self.assertIn("AGENTS.md", workflow["on"][event]["paths"])
+            paths = workflow["on"][event]["paths"]
+            self.assertIn("AGENTS.md", paths)
+            self.assertIn("README.md", paths)
+            self.assertIn(".agents/skills/artist-subagent-backend-setup/**", paths)
+            self.assertIn("Packages/com.darumappap.unity-artist/Documentation~/**", paths)
 
     def test_release_gate_covers_canonical_manifest_changes(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -126,6 +130,16 @@ class RegistryValidatorTests(unittest.TestCase):
             manifest["evidence"]["runtime_provenance"]["producer"],
             "UnityAgent.ReferenceImplementation.v1.1",
         )
+
+    def test_hub_setup_guidance_uses_unityagent_approval_gate(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        skill = (root / ".agents/skills/artist-subagent-backend-setup/SKILL.md").read_text(encoding="utf-8")
+        guide = (root / "SubAgents/artist_subagent/README.md").read_text(encoding="utf-8")
+        self.assertIn("unity-agent setup --operation plan", skill)
+        self.assertIn("unity-agent setup --operation apply", skill)
+        self.assertNotIn("unity artist install --project-path", skill)
+        self.assertIn("Runtime/ReferenceImplementation/subagent-catalog.yaml", guide)
+        self.assertNotIn("`unity_artist_cli` Profile", guide)
 
     def write_registry(self) -> None:
         entries = "\n".join(f"  - manifest: {path}" for path in self.manifests)
