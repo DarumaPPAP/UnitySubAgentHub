@@ -102,6 +102,16 @@ class RegistryValidatorTests(unittest.TestCase):
 
         self.assertTrue(any("duplicate YAML key" in error for error in errors))
 
+    def test_hub_governance_changes_trigger_contract_validation(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        workflow = yaml.load(
+            (root / ".github/workflows/subagent-hub-contract.yml").read_text(encoding="utf-8"),
+            Loader=yaml.BaseLoader,
+        )
+
+        for event in ("pull_request", "push"):
+            self.assertIn("AGENTS.md", workflow["on"][event]["paths"])
+
     def test_release_gate_covers_canonical_manifest_changes(self) -> None:
         root = Path(__file__).resolve().parents[2]
         workflow = (root / ".github/workflows/release-gate.yml").read_text(encoding="utf-8")
