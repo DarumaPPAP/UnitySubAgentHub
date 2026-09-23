@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - AGENTS.md
+      - README.md
+      - .agents/skills/artist-subagent-backend-setup/**
+      - Packages/com.darumappap.unity-artist/Documentation~/**
       - Registry/**
       - Schemas/**
       - SubAgents/**
@@ -14,6 +17,9 @@ on:
     branches: [main]
     paths:
       - AGENTS.md
+      - README.md
+      - .agents/skills/artist-subagent-backend-setup/**
+      - Packages/com.darumappap.unity-artist/Documentation~/**
       - Registry/**
       - Schemas/**
       - SubAgents/**

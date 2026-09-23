@@ -40,9 +40,11 @@ falseまたはunknownは候補から除外します。Capability解決時の自�
 
 ### 現在のUnityAgent連携状態
 
-UnitySubAgentHub CIはManifestからSnapshot Artifactを公開しますが、2026-09-18時点でUnityAgentはそれを自動取込しません。UnityAgent mainのReferenceImplementationはチェックイン済みの`unity_artist_cli` Profileを読み、Hubが発行する`artist_subagent` Snapshotは`activation`フィールドとProfile IDの差により直接読み込めません。Import Adapterと全環境Gateの接続が完了するまでは、このGuideのContractを現行Runtimeで解決可能だと解釈しないでください。
+UnitySubAgentHub CIはManifestからデータ専用Snapshot Artifactを公開します。UnityAgentは`Runtime/ReferenceImplementation/subagent-catalog.yaml`の`artist_subagent` Profileを読みます。Hub Snapshotは明示的なOffline Import Gateで照合できますが、自動取得・自動同期・RuntimeへのHot Reloadは行いません。チェックイン済みCatalogとHub Snapshotの差分はImport Planとレビュー対象です。登録だけで実機のActivation Gateが成立したとは扱いません。
 
 ## Backend CLI
+
+UnityAgent連携のSetup入口はUnityAgent Control Planeの`doctor → setup plan → approval → setup apply → doctor`です。手順はUnityAgentの`unity-agent-setup` Skillを参照してください。次の`unity artist`コマンドはBackend固有の操作面であり、UnityAgent連携のInstall・Approval・Capability Resolutionの代替入口ではありません。
 
 ```text
 unity artist help
