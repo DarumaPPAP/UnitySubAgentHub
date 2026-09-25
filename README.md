@@ -106,12 +106,7 @@ Canonical files:
 
 ## Eligibility
 
-EligibilityはRankingより先に評価されます。
-
-```text
-registered → discovered → installed → compatible → project_bound
-           → available → eligible → ranked
-```
+Manifestは必要なEnvironment factsとfalse / unknown時の除外契約を宣言します。UnityAgentが評価順序とRankingを決めます。
 
 ArtistSubAgentのrequired activation gates:
 
@@ -139,23 +134,13 @@ CompatibilityはManifestで宣言されますが、現在のProjectが実際に�
 
 ## Snapshot Integration
 
-Hub CIはActive Manifestを検証したうえで、データ専用の `UnityAgent-SubAgent-Catalog-Snapshot` Artifactを生成します。
+Hub CIは登録されたManifestを検証し、`Hub-SubAgent-Catalog-Snapshot` Artifactを生成します。SnapshotにはLifecycleを含む静的ManifestとそのRepository相対Pathを収録します。`Schemas/subagent-catalog-snapshot.schema.json`で構造を検証します。
 
-Exporterは現在、以下をUnityAgent ReferenceImplementation profile形式として出力します。
-
-- Profile ID: `artist_subagent`
-- Provider ID: `unity_artist_cli`
-- Resolver-visible capabilities
-- Required evidence
-- Optional install / `auto_install: false`
-- Required activation environment gates
-- Scope / value / approval / evidence provenance
+SnapshotにTask Route、`goal_type`、`primary_capability`、既定Profile、現在のProject / Environment状態、選択済みProvider、実行時Evidence producerは含めません。
 
 UnityAgent `main` は、現在Repository内の `Runtime/ReferenceImplementation/subagent-catalog.yaml` を読み込みます。Hub CI Artifactを自動取得・同期する経路は現行コードにはありません。
 
-したがって、**Artifact公開 != UnityAgent Runtimeへ同期済み** です。HubとUnityAgentのProfile contractを変更するときは、両Repositoryで同時に検証してください。
-
-Artistの現行runtime provenanceは `UnityAgent.ReferenceImplementation.v1.1` です。Consumer側が別Revisionを持つ場合、Snapshotを自動補正せず、契約差分としてImport Gateでブロックします。Compatibility Factの生成・観測はHubでは行わず、UnityAgentのEnvironment discoveryが担当します。
+したがって、**Artifact公開 != UnityAgent Runtimeへ同期済み** です。UnityAgent側のOffline Import AdapterがSnapshotを検証し、UnityAgent所有のProfile値と照合してImport Planを作ります。HubとUnityAgentのContractを変更するときは両Repositoryで検証してください。Compatibility Factの生成・観測はUnityAgentのEnvironment discoveryが担当します。
 
 ## Add a Specialist
 

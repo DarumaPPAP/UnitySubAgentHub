@@ -172,25 +172,8 @@ def _validate_registry(root: Path, schema: Any, errors: list[str]) -> tuple[dict
         return {}, []
     _schema_errors(registry, schema, REGISTRY_PATH, errors)
 
-    if registry.get("schema_version") != "1.0" or registry.get("kind") != "subagent_registry":
+    if registry.get("schema_version") != "2.0" or registry.get("kind") != "subagent_registry":
         errors.append("Registry/subagents.yaml: unsupported schema_version or kind")
-    if registry.get("control_plane") != "unity_agent":
-        errors.append("Registry/subagents.yaml: UnityAgent must remain the sole control plane")
-    runtime = registry.get("runtime")
-    if not isinstance(runtime, dict) or runtime.get("owns_execution") is not False or runtime.get("owns_resolution") is not False:
-        errors.append("Registry/subagents.yaml: Hub must not own SubAgent execution or capability resolution")
-    if not isinstance(runtime, dict) or runtime.get("auto_install") is not False:
-        errors.append("Registry/subagents.yaml: Hub must not auto-install SubAgents")
-
-    resolution = registry.get("resolution")
-    if not isinstance(resolution, dict):
-        resolution = {}
-    if resolution.get("eligible_lifecycle") != "active":
-        errors.append("Registry/subagents.yaml: only active lifecycle entries may be eligible")
-    if resolution.get("unknown_behavior") != "exclude_from_resolution" or resolution.get("unavailable_behavior") != "exclude_from_resolution":
-        errors.append("Registry/subagents.yaml: unknown or unavailable SubAgents must be excluded from resolution")
-    if resolution.get("auto_install") is not False:
-        errors.append("Registry/subagents.yaml: capability resolution must never auto-install")
 
     entries = registry.get("entries")
     if not isinstance(entries, list) or not entries:
@@ -321,43 +304,6 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
         dependency_id = dependency.get("id")
         if dependency_id not in declared_backend_ids:
             errors.append(f"{path}: backend dependency {dependency_id!r} must reference a backend declared in backends")
-    primary_backends = [backend for backend in backends if isinstance(backend, dict) and backend.get("primary") is True]
-    if len(primary_backends) != 1:
-        errors.append(f"{path}: exactly one primary backend is required for UnityAgent profile export")
-    active_gates = {gate for gate in gates if isinstance(gate, str)} if isinstance(gates, list) else set()
-    for backend in primary_backends:
-        backend_id = backend.get("id")
-        has_required_gate = any(
-            isinstance(dependency, dict)
-            and dependency.get("kind") == "backend"
-            and dependency.get("id") == backend_id
-            and dependency.get("required") is True
-            and isinstance(dependency.get("eligibility_gate"), str)
-            and dependency.get("eligibility_gate") in active_gates
-            for dependency in dependencies
-        )
-        if not has_required_gate:
-            errors.append(f"{path}: primary backend {backend_id!r} must have a required dependency gate in activation")
-
-    runtime_profile = manifest.get("runtime_profile")
-    if isinstance(runtime_profile, dict):
-        reference_keys = {"scope", "value", "approval"}
-        if manifest.get("schema_version") == "1.0" and not reference_keys.issubset(runtime_profile):
-            errors.append(f"{path}: v1 runtime_profile requires camera reference constraints")
-        if manifest.get("schema_version") == "2.0" and reference_keys.intersection(runtime_profile):
-            errors.append(f"{path}: v2 generic runtime_profile must not embed task-specific scope/value/approval")
-        runtime_capabilities = [f"{capability.get('id')}.{operation}" for capability in capabilities if isinstance(capability, dict) for operation in capability.get("operations", [])]
-        if runtime_profile.get("primary_capability") not in runtime_capabilities:
-            errors.append(f"{path}: runtime_profile.primary_capability must be declared by capabilities")
-        if runtime_profile.get("goal_type") not in runtime_capabilities:
-            errors.append(f"{path}: runtime_profile.goal_type must be declared by capabilities")
-        value = runtime_profile.get("value")
-        approval = runtime_profile.get("approval")
-        if isinstance(value, dict) and isinstance(value.get("minimum"), (int, float)) and isinstance(value.get("maximum"), (int, float)) and value["minimum"] >= value["maximum"]:
-            errors.append(f"{path}: runtime_profile.value minimum must be lower than maximum")
-        if isinstance(approval, dict) and isinstance(approval.get("default_minimum"), (int, float)) and isinstance(approval.get("default_maximum"), (int, float)) and approval["default_minimum"] > approval["default_maximum"]:
-            errors.append(f"{path}: runtime_profile.approval minimum must not exceed maximum")
-
     evidence = manifest.get("evidence")
     if not isinstance(evidence, dict) or evidence.get("required") is not True:
         errors.append(f"{path}: evidence must be required")
@@ -374,7 +320,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     errors: list[str] = []
     manifest_schema = _check_schema_definition(_read_json(root / MANIFEST_SCHEMA_PATH, errors), MANIFEST_SCHEMA_PATH, errors)
     registry_schema = _check_schema_definition(_read_json(root / REGISTRY_SCHEMA_PATH, errors), REGISTRY_SCHEMA_PATH, errors)
-    registry, registered_paths = _validate_registry(root, registry_schema, errors)
+    _, registered_paths = _validate_registry(root, registry_schema, errors)
     manifest_root = root / MANIFEST_ROOT
     discovered_paths = sorted(
         path.relative_to(root).as_posix()
@@ -384,28 +330,8 @@ def validate_repository(root: Path = ROOT) -> list[str]:
         errors.append("SubAgents/: directory is required")
     if set(registered_paths) != set(discovered_paths):
         errors.append("Registry/subagents.yaml: registry entries do not cover all manifests exactly once")
-    manifests = [
-        manifest for path in registered_paths
-        if (manifest := _validate_manifest(root, path, manifest_schema, errors)) is not None
-    ]
-    default_profile = registry.get("default_profile")
-    indexed_active_ids = {
-        str(manifest.get("identity", {}).get("id"))
-        for manifest in manifests
-        if manifest.get("lifecycle") == "active" and isinstance(manifest.get("identity"), dict)
-    }
-    if default_profile not in indexed_active_ids:
-        errors.append("Registry/subagents.yaml: default_profile must reference an active registered SubAgent")
-    capabilities: list[str] = []
-    for manifest in manifests:
-        if manifest.get("lifecycle") != "active":
-            continue
-        for capability in manifest.get("capabilities", []):
-            if not isinstance(capability, dict):
-                continue
-            capabilities.extend(f"{capability.get('id')}.{operation}" for operation in capability.get("operations", []))
-    if len(set(capabilities)) != len(capabilities):
-        errors.append("active SubAgent runtime capabilities must be unique; UnityAgent resolves one profile per capability")
+    for path in registered_paths:
+        _validate_manifest(root, path, manifest_schema, errors)
     return errors
 
 

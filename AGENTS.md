@@ -20,7 +20,7 @@ This repository owns the SubAgent registry, shared schemas, per-specialist manif
 
 ## Adding a specialist
 
-Create one `SubAgents/<id>/manifest.yaml` that satisfies `Schemas/subagent-manifest.schema.json`, then add its path to `Registry/subagents.yaml`. Keep the manifest's backend ids separate from its specialist id. Use stable resolver-visible capability ids and declare exact supported Unity-version/render-pipeline pairs, dependencies, backend refs, and evidence refs. Every required dependency, including the primary backend, must have a gate in `activation.required_before_resolution`. A new entry using the shared contract must not require UnityAgent source changes.
+Create one `SubAgents/<id>/manifest.yaml` that satisfies `Schemas/subagent-manifest.schema.json`, then add its path to `Registry/subagents.yaml`. Keep the manifest's backend ids separate from its specialist id. Use stable resolver-visible capability ids and declare exact supported Unity-version/render-pipeline pairs, dependencies, backend refs, and evidence refs. Every required dependency must have a gate in `activation.required_before_resolution`. A new specialist may require an explicit UnityAgent import migration when the consumer has no corresponding Runtime Profile.
 
 Do not add runtime dispatch, candidate ranking, local environment discovery, package installation, or project mutation to this repository's Hub validation path. New manifest paths must be covered by the shared validator and CI.
 
@@ -34,7 +34,7 @@ python -m unittest discover -s Tests/Hub -p 'test_*.py' -v
 python Tests/Hub/export_agent_snapshot.py --output /tmp/subagent-catalog.yaml
 ```
 
-The Hub workflow publishes a data-only profile snapshot for UnityAgent. The current UnityAgent profile resolver requires a unique profile for each capability, so overlapping active runtime capabilities are rejected until its contract supports ranking. This snapshot does not observe runtime installation, compatibility, binding, or readiness; UnityAgent must apply those checks against its own environment facts.
+The Hub workflow publishes a consumer-neutral static Manifest snapshot. Overlapping active capabilities are valid Hub metadata; the current UnityAgent Import Gate rejects them until its resolver supports ranking. The snapshot does not observe runtime installation, compatibility, binding, or readiness; UnityAgent must apply those checks against its own environment facts. UnityAgent owns runtime profile fields, including default profile, audience, goal type, primary capability, reference scope and evidence producer.
 
 Keep the existing Artist gates green when changing its linked contracts:
 

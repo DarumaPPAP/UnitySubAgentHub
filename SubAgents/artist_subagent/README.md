@@ -1,109 +1,45 @@
-# ArtistSubAgent Guide
+# ArtistSubAgent
 
-ArtistSubAgentはUnity Visual Art / LookDev / Lighting / Environment / Camera / CinematicのOptional Specialistです。UnityAgentから委譲される専門Agentとして設計し、第二のControl Plane、独自Provider Registry、独立したCodex Pluginにはしません。
+ArtistSubAgentはUnityのVisual Art、LookDev、Lighting、Environment、Camera、Cinematicを扱うOptional Specialistです。UnityAgentから委譲され、独立したControl Planeにはなりません。
 
-## Identity
+## Identity and domain
 
-| Concept | ID / Name |
+| Concern | Value |
 |---|---|
-| Specialist identity | `ArtistSubAgent` |
-| Canonical runtime ID | `artist_subagent` |
-| Backend ID | `unity_artist_cli` |
-| Host executable | `unity-artist` |
+| Specialist ID | `artist_subagent` |
+| Display name | `ArtistSubAgent` |
+| Current backend ID | `unity_artist_cli` |
+| Backend executable | `unity-artist` |
 | Unity Package ID | `com.darumappap.unity-artist` |
 
-`artist_subagent`はManifestの`identity.id`、`unity_artist_cli`はBackendの`id`です。既存の`unity-artist` executable、`unity artist <command>` UX、Package、`UnityArtist` namespaceはBackend compatibility surfaceとして残ります。
+`unity_artist_cli`は実行BackendのIdentityであり、Specialist IDの代替ではありません。
 
-Identity、Lifecycle、Optional Install、Activation Gates、Dependency、Compatibility、Backend参照、Evidenceの正本は[manifest.yaml](manifest.yaml)です。このGuideはBackendの既存CLIと操作範囲を説明します。
+## Static contract
 
-## Resolver-visible boundary
-
-Manifestが現在宣言するCapability:
+[Manifest](manifest.yaml)がIdentity、Lifecycle、Optional Installation、Activation、Compatibility、Dependencies、Backend参照、Evidence requirementsの正本です。現在のResolver-visible Capabilityは次の3件です。
 
 - `artist.camera.inspect`
 - `artist.camera.refine`
 - `visual.capture`
 
-Backend CLIのLookDev、Cinematic、Lighting / Environment、Evaluation、Historyなどのコマンドが存在しても、それだけではUnityAgent Resolverの候補になりません。Manifestで公開され、かつUnityAgent RuntimeがそのCapability semanticsをサポートしている必要があります。
+Backend内部のコマンド一覧はResolver-visible Capabilityを増やしません。詳細は[Capability contract](contracts/capability-contracts.yaml)と[Backend surface contract](contracts/backend-surface-contract.yaml)を参照してください。
 
-## Optional activation
+| Unity | Render Pipeline |
+|---|---|
+| Unity 6.x+ | Built-in |
+| Unity 6.x+ | URP |
+| Unity 6.x+ | HDRP |
 
-登録済みでも、自動的に導入・実行可能とは限りません。UnityAgentは解決前に次のFactを観測します。
+Unity 2022.3は現行Production対象外です。過去の実測はHistorical Evidenceであり、現在のFallback Transportではありません。
 
-- Backend available
-- 対応Unity Version / Render Pipeline
-- 正確なProject Binding
-- Package installed
-- Pipeline reachable
+## Activation and evidence
 
-falseまたはunknownは候補から除外します。Capability解決時の自動Installは禁止です。Userが別途Setupを要求した場合にだけInstallを行います。
+ManifestはBackend availability、Compatibility、Project binding、Package installation、Pipeline reachabilityを必要なEnvironment factsとして宣言します。UnityAgentが現在値を観測し、falseまたはunknownを候補から除外します。Capability解決時の自動Installは行いません。SetupはUnityAgentの`doctor → setup plan → approval → setup apply → doctor`による明示的な別操作です。
 
-### 現在のUnityAgent連携状態
+Evidence types、required artifacts、terminal statesと[Evidence contract](../../Tests/Compatibility/release-verification.yaml)はManifestから参照します。Runtime Evidence producer、正規化、永続化はUnityAgentの責務です。`blocked_by_environment`は成功ではありません。
 
-UnitySubAgentHub CIはManifestからデータ専用Snapshot Artifactを公開します。UnityAgentは`Runtime/ReferenceImplementation/subagent-catalog.yaml`の`artist_subagent` Profileを読みます。Hub Snapshotは明示的なOffline Import Gateで照合できますが、自動取得・自動同期・RuntimeへのHot Reloadは行いません。チェックイン済みCatalogとHub Snapshotの差分はImport Planとレビュー対象です。登録だけで実機のActivation Gateが成立したとは扱いません。
+## UnityAgent import boundary
 
-## Backend CLI
+Hubは静的Snapshotを公開します。UnityAgentは`Runtime/ReferenceImplementation/subagent-catalog.yaml`を自分のRuntime Catalogとして所有し、Offline Import AdapterでSnapshotの差分を検証します。Hubの登録やArtifact公開だけでRuntime Catalogを同期・Hot Reloadしません。
 
-UnityAgent連携のSetup入口はUnityAgent Control Planeの`doctor → setup plan → approval → setup apply → doctor`です。手順はUnityAgentの`unity-agent-setup` Skillを参照してください。次の`unity artist`コマンドはBackend固有の操作面であり、UnityAgent連携のInstall・Approval・Capability Resolutionの代替入口ではありません。
-
-```text
-unity artist help
-unity-artist --help
-unity artist version --format json
-unity artist doctor --project-path <project> --format json --non-interactive
-unity artist capabilities --project-path <project> --format json
-unity artist install --project-path <project> --format json --non-interactive
-unity artist inspect|plan|preview|apply|capture|evaluate|refine|cinematic|history ...
-```
-
-`unity artist help`はUnity CLI Pluginのhelp、`unity-artist --help`は単独Executableのhelpです。現在のUnity CLI betaは`unity artist --help`をPlugin Dispatch前にGlobal helpとして処理します。これは外部CLIの互換制約です。
-
-Operational commandは明示的なProject Pathを受け取り、`human` / `json` / `ndjson`を出力します。Mutationの基本順序:
-
-```text
-Inspect → Plan → Exact Diff → Expected Revision
-       → UnityAgent Approval → Apply → Evidence
-```
-
-ApplyはUndoを登録しますが、自動Saveしません。
-
-## Support matrix
-
-この表はBackendのテスト対象Version / Pipelineであり、Install済みやResolver適格性の保証ではありません。
-
-| Unity | Pipeline | Tier | Backend transport |
-|---|---|---|---|
-| Unity 6.x+ | Built-in | primary | Official Unity CLI + Unity Pipeline |
-| Unity 6.x+ | URP | primary | Official Unity CLI + Unity Pipeline |
-| Unity 6.x+ | HDRP | primary | Official Unity CLI + Unity Pipeline |
-
-Unity 2022.3（全Render Pipeline）は現行Production対象外です。過去のBatch実測はHistorical Evidenceであり、現在のFallback Transportではありません。Unity CLIはcommand / automation surface、Unity Pipelineは接続済みEditorのlocal HTTP bridgeです。MCP、自動Fallback、汎用CRUD、自動Saveは現行Backendの契約では使用しません。
-
-## Verify
-
-代表的なBackend / Contract検証:
-
-```powershell
-dotnet build src/UnityArtist.Cli/UnityArtist.Cli.csproj
-python Tests/Release/verify_unity_artist_contract.py
-python Tests/Compatibility/verify-unity-api-compatibility.py
-python -m unittest Tests/Minimal/test_minimal_smoke_contract.py
-python Tests/Compatibility/verify-primary-urp-evidence.py
-```
-
-`blocked_by_environment`は成功ではありません。Static Contract、CLI parser、unsupported preflight、Direct Editor、E2E Evidenceを区別して記録します。各EvidenceとFixtureは[Compatibility README](../../Tests/Compatibility/README.md)を参照してください。
-
-## Migration and layout
-
-旧MyUnityMCP v1.1.1は`Legacy/MyUnityMCP-1.1.1/`にArchiveされています。新しいBackend Surfaceに旧MCP Transportや`McpForUnityTool`を再導入しません。
-
-```text
-src/UnityArtist.Cli/                         # unity-artist Backend host
-Packages/com.darumappap.unity-artist/        # Unity Editor Backend API
-SubAgents/artist_subagent/manifest.yaml      # canonical specialist identity / gates
-SubAgents/artist_subagent/contracts/         # backend and capability contracts
-Tests/Compatibility/                         # backend matrix and evidence
-.agents/skills/artist-subagent-*/            # repository-scoped specialist workflows
-```
-
-UnityAgent Repositoryが唯一の`unity-agent` Codex Pluginを配布します。このRepositoryにArtistSubAgent専用Codex Pluginはありません。
+Artist Package、CLI、Installer、Backend Tests、Releaseは現在同じRepository内のArtist Backend Productに属します。詳細は[Hub Architecture](../../Design/subagent-hub-architecture.md)と[Ownership audit](../../Design/authority-cleanup-audit.md)を参照してください。

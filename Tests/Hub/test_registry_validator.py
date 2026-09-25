@@ -13,9 +13,8 @@ from validate_registry import validate_repository
 
 def manifest(subagent_id: str, backend_id: str) -> dict:
     capability_prefix = subagent_id.removesuffix("_subagent")
-    primary_capability = f"{capability_prefix}.inspect"
     return {
-        "schema_version": "1.0",
+        "schema_version": "3.0",
         "kind": "subagent_manifest",
         "identity": {"id": subagent_id, "name": subagent_id.replace("_", " ").title(), "version": "1.0.0"},
         "lifecycle": "active",
@@ -34,26 +33,11 @@ def manifest(subagent_id: str, backend_id: str) -> dict:
         "dependencies": [
             {"id": backend_id, "kind": "backend", "required": True, "eligibility_gate": "backend_available"}
         ],
-        "backends": [{"id": backend_id, "kind": "cli", "primary": True, "executable": backend_id, "contract_ref": "Contracts/backend.yaml"}],
-        "runtime_profile": {
-            "audience": subagent_id,
-            "goal_type": primary_capability,
-            "primary_capability": primary_capability,
-            "scope": {
-                "default_target_guid": "asset-guid-001",
-                "component_type": "Example.Component",
-                "property_paths": ["Example.value"],
-                "mutation_channels": ["typed_property"],
-                "max_targets": 1,
-            },
-            "value": {"type": "float", "unit": "normalized", "minimum": 0, "maximum": 1, "maximum_exclusive": True},
-            "approval": {"default_minimum": 0, "default_maximum": 1, "minimum_exclusive": False, "maximum_exclusive": True},
-        },
+        "backends": [{"id": backend_id, "kind": "cli", "executable": backend_id, "contract_ref": "Contracts/backend.yaml"}],
         "evidence": {
             "required": True,
             "required_artifacts": ["provider_result"],
             "runtime_types": ["state_observation"],
-            "runtime_provenance": {"source_type": "example", "producer": "UnityAgent.Example.v1", "provenance_token": subagent_id},
             "terminal_states": ["verified", "partial_verified", "blocked_by_environment"],
             "contract_ref": "Contracts/evidence.yaml",
         },
@@ -68,7 +52,7 @@ class RegistryValidatorTests(unittest.TestCase):
         (self.root / "Registry").mkdir()
         (self.root / "Contracts").mkdir()
         schema_root = Path(__file__).resolve().parents[2] / "Schemas"
-        for name in ("subagent-manifest.schema.json", "subagent-registry.schema.json"):
+        for name in ("subagent-manifest.schema.json", "subagent-registry.schema.json", "subagent-catalog-snapshot.schema.json"):
             shutil.copyfile(schema_root / name, self.root / "Schemas" / name)
         for contract in ("support-matrix.yaml", "backend.yaml", "evidence.yaml", "capabilities.yaml"):
             (self.root / "Contracts" / contract).write_text("kind: test\n", encoding="utf-8")
@@ -82,9 +66,9 @@ class RegistryValidatorTests(unittest.TestCase):
         self.write_registry()
         path = self.root / "Registry/subagents.yaml"
         text = path.read_text(encoding="utf-8")
-        key = "  unknown_behavior: exclude_from_resolution\n"
+        key = "kind: subagent_registry\n"
         self.assertIn(key, text)
-        path.write_text(text.replace(key, "  unknown_behavior: allow\n" + key, 1), encoding="utf-8")
+        path.write_text(text.replace(key, "kind: other\n" + key, 1), encoding="utf-8")
 
         errors = validate_repository(self.root)
 
@@ -114,8 +98,8 @@ class RegistryValidatorTests(unittest.TestCase):
             paths = workflow["on"][event]["paths"]
             self.assertIn("AGENTS.md", paths)
             self.assertIn("README.md", paths)
-            self.assertIn(".agents/skills/artist-subagent-backend-setup/**", paths)
-            self.assertIn("Packages/com.darumappap.unity-artist/Documentation~/**", paths)
+            self.assertIn("Design/**", paths)
+            self.assertIn("Schemas/**", paths)
 
     def test_release_gate_covers_canonical_manifest_changes(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -123,14 +107,13 @@ class RegistryValidatorTests(unittest.TestCase):
 
         self.assertIn("      - SubAgents/**", workflow)
 
-    def test_checked_in_artist_producer_matches_current_unityagent_reference_contract(self) -> None:
+    def test_artist_manifest_does_not_define_consumer_runtime_profile(self) -> None:
         root = Path(__file__).resolve().parents[2]
         manifest = yaml.safe_load((root / "SubAgents/artist_subagent/manifest.yaml").read_text(encoding="utf-8"))
 
-        self.assertEqual(
-            manifest["evidence"]["runtime_provenance"]["producer"],
-            "UnityAgent.ReferenceImplementation.v1.1",
-        )
+        self.assertNotIn("runtime_profile", manifest)
+        self.assertNotIn("runtime_provenance", manifest["evidence"])
+        self.assertNotIn("primary", manifest["backends"][0])
 
     def test_current_artist_support_is_unity6_pipeline_only(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -149,19 +132,19 @@ class RegistryValidatorTests(unittest.TestCase):
         self.assertIn("unity_artist_cli.pipeline_reachable", manifest["activation"]["required_before_resolution"])
         self.assertTrue(any(item["id"] == "com.unity.pipeline" for item in manifest["dependencies"]))
 
-    def test_generic_artist_snapshot_excludes_camera_fov_reference_values(self) -> None:
-        from export_agent_snapshot import export_agent_catalog
+    def test_hub_snapshot_contains_static_artist_contract_only(self) -> None:
+        from export_agent_snapshot import export_hub_snapshot, validate_snapshot
         root = Path(__file__).resolve().parents[2]
         manifest = yaml.safe_load((root / "SubAgents/artist_subagent/manifest.yaml").read_text(encoding="utf-8"))
-        catalog = export_agent_catalog(root)
-        artist = catalog["profiles"]["artist_subagent"]
-        self.assertEqual(manifest["schema_version"], "2.0")
-        self.assertEqual(catalog["schema_version"], "2.0")
-        self.assertEqual(artist["goal_type"], "visual.capture")
-        self.assertEqual(artist["primary_capability"], "visual.capture")
-        for name in ("scope", "value", "approval"):
+        snapshot = export_hub_snapshot(root)
+        artist = snapshot["specialists"][0]["manifest"]
+        self.assertEqual(manifest["schema_version"], "3.0")
+        self.assertEqual(snapshot["kind"], "subagent_catalog_snapshot")
+        self.assertEqual(artist, manifest)
+        self.assertEqual([], validate_snapshot(snapshot, root))
+        for name in ("runtime_profile", "goal_type", "primary_capability", "audience"):
             self.assertNotIn(name, artist)
-            self.assertNotIn(name, manifest["runtime_profile"])
+        self.assertNotIn("default_profile", snapshot)
         self.assertFalse((root / "SubAgents/artist_subagent/contracts/camera-fov-reference-profile.yaml").exists())
 
     def test_hub_setup_guidance_uses_unityagent_approval_gate(self) -> None:
@@ -177,16 +160,8 @@ class RegistryValidatorTests(unittest.TestCase):
     def write_registry(self) -> None:
         entries = "\n".join(f"  - manifest: {path}" for path in self.manifests)
         (self.root / "Registry/subagents.yaml").write_text(
-            "schema_version: '1.0'\n"
+            "schema_version: '2.0'\n"
             "kind: subagent_registry\n"
-            "control_plane: unity_agent\n"
-            "runtime: {owns_execution: false, owns_resolution: false, auto_install: false}\n"
-            "resolution:\n"
-            "  eligible_lifecycle: active\n"
-            "  unknown_behavior: exclude_from_resolution\n"
-            "  unavailable_behavior: exclude_from_resolution\n"
-            "  auto_install: false\n"
-            "default_profile: artist_subagent\n"
             f"entries:\n{entries}\n",
             encoding="utf-8",
         )
@@ -263,18 +238,6 @@ class RegistryValidatorTests(unittest.TestCase):
 
         self.assertTrue(any("backend dependency" in error and "missing_backend" in error for error in errors))
 
-    def test_primary_backend_must_have_a_required_dependency_gate(self) -> None:
-        self.add_manifest("artist_subagent", "unity_artist_cli")
-        path = self.root / "SubAgents/artist_subagent/manifest.yaml"
-        value = __import__("yaml").safe_load(path.read_text(encoding="utf-8"))
-        value["dependencies"] = []
-        path.write_text(__import__("yaml").safe_dump(value, sort_keys=False), encoding="utf-8")
-        self.write_registry()
-
-        errors = validate_repository(self.root)
-
-        self.assertTrue(any("primary backend" in error and "required dependency" in error for error in errors))
-
     def test_malformed_required_dependency_gate_is_reported_without_crashing(self) -> None:
         self.add_manifest("artist_subagent", "unity_artist_cli")
         path = self.root / "SubAgents/artist_subagent/manifest.yaml"
@@ -324,15 +287,27 @@ class RegistryValidatorTests(unittest.TestCase):
         self.write_registry()
         registry_path = self.root / "Registry/subagents.yaml"
         registry = __import__("yaml").safe_load(registry_path.read_text(encoding="utf-8"))
-        registry["runtime"]["owns_execution"] = True
+        registry["runtime"] = {"owns_execution": True}
         registry_path.write_text(__import__("yaml").safe_dump(registry, sort_keys=False), encoding="utf-8")
 
         errors = validate_repository(self.root)
 
-        self.assertTrue(any("Hub must not own SubAgent execution" in error for error in errors))
+        self.assertTrue(any("unexpected property 'runtime'" in error for error in errors))
 
-    def test_runtime_snapshot_includes_multiple_active_profiles_and_excludes_inactive(self) -> None:
-        from export_agent_snapshot import export_agent_catalog
+    def test_registry_rejects_consumer_profile_selection(self) -> None:
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        self.write_registry()
+        registry_path = self.root / "Registry/subagents.yaml"
+        registry = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+        registry["default_profile"] = "artist_subagent"
+        registry_path.write_text(yaml.safe_dump(registry, sort_keys=False), encoding="utf-8")
+
+        errors = validate_repository(self.root)
+
+        self.assertTrue(any("unexpected property 'default_profile'" in error for error in errors))
+
+    def test_snapshot_includes_active_and_deprecated_contracts(self) -> None:
+        from export_agent_snapshot import export_hub_snapshot
 
         self.add_manifest("artist_subagent", "unity_artist_cli")
         self.add_manifest("shader_subagent", "unity_shader_cli")
@@ -342,36 +317,32 @@ class RegistryValidatorTests(unittest.TestCase):
         shader_path.write_text(__import__("yaml").safe_dump(shader, sort_keys=False), encoding="utf-8")
         self.write_registry()
 
-        catalog = export_agent_catalog(self.root)
+        snapshot = export_hub_snapshot(self.root)
 
-        self.assertEqual("artist_subagent", catalog["default_profile"])
-        self.assertEqual({"artist_subagent"}, set(catalog["profiles"]))
-        artist = catalog["profiles"]["artist_subagent"]
-        self.assertEqual(
-            {
-                "profile_id", "display_name", "provider_id", "audience", "goal_type", "capabilities",
-                "primary_capability", "required_evidence", "activation", "scope", "value", "approval", "evidence",
-            },
-            set(artist),
-        )
-        self.assertEqual("unity_artist_cli", artist["provider_id"])
-        self.assertFalse(artist["activation"]["auto_install"])
-        self.assertEqual(["artist.inspect"], artist["capabilities"])
+        self.assertEqual(["artist_subagent", "shader_subagent"], [item["manifest"]["identity"]["id"] for item in snapshot["specialists"]])
+        self.assertEqual("deprecated", snapshot["specialists"][1]["manifest"]["lifecycle"])
+        self.assertNotIn("default_profile", snapshot)
 
-    def test_duplicate_runtime_capabilities_are_rejected_until_agent_can_rank_profiles(self) -> None:
+    def test_overlapping_capabilities_are_valid_hub_metadata(self) -> None:
         self.add_manifest("artist_subagent", "unity_artist_cli")
         self.add_manifest("shader_subagent", "unity_shader_cli")
         shader_path = self.root / "SubAgents/shader_subagent/manifest.yaml"
         shader = __import__("yaml").safe_load(shader_path.read_text(encoding="utf-8"))
         shader["capabilities"][0]["id"] = "artist"
-        shader["runtime_profile"]["goal_type"] = "artist.inspect"
-        shader["runtime_profile"]["primary_capability"] = "artist.inspect"
         shader_path.write_text(__import__("yaml").safe_dump(shader, sort_keys=False), encoding="utf-8")
         self.write_registry()
 
-        errors = validate_repository(self.root)
+        self.assertEqual([], validate_repository(self.root))
 
-        self.assertTrue(any("active SubAgent runtime capabilities must be unique" in error for error in errors))
+    def test_snapshot_rejects_consumer_runtime_fields(self) -> None:
+        from export_agent_snapshot import export_hub_snapshot, validate_snapshot
+
+        self.add_manifest("artist_subagent", "unity_artist_cli")
+        self.write_registry()
+        snapshot = export_hub_snapshot(self.root)
+        snapshot["specialists"][0]["manifest"]["runtime_profile"] = {"goal_type": "artist.inspect"}
+
+        self.assertTrue(any("unexpected property 'runtime_profile'" in error for error in validate_snapshot(snapshot, self.root)))
 
 
 if __name__ == "__main__":
