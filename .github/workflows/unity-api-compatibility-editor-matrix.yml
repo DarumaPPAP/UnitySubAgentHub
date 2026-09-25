@@ -18,7 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         fixture:
-          - unity-2022.3-builtin
           - unity-6-builtin
           - unity-6-urp
           - unity-6-hdrp

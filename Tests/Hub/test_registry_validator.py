@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -130,6 +131,23 @@ class RegistryValidatorTests(unittest.TestCase):
             manifest["evidence"]["runtime_provenance"]["producer"],
             "UnityAgent.ReferenceImplementation.v1.1",
         )
+
+    def test_current_artist_support_is_unity6_pipeline_only(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        manifest = yaml.safe_load((root / "SubAgents/artist_subagent/manifest.yaml").read_text(encoding="utf-8"))
+        matrix = yaml.safe_load((root / "Tests/Compatibility/support-matrix.yaml").read_text(encoding="utf-8"))
+        package = json.loads((root / "Packages/com.darumappap.unity-artist/package.json").read_text(encoding="utf-8"))
+        targets = {(item["unity_version"], item["render_pipeline"]) for item in manifest["compatibility"]["supported_targets"]}
+        rows = {(item["unity_version"], item["render_pipeline"]) for item in matrix["rows"]}
+        expected = {("Unity 6.x+", pipeline) for pipeline in ("builtin", "urp", "hdrp")}
+        self.assertEqual(targets, expected)
+        self.assertEqual(rows, expected)
+        self.assertEqual(package["unity"], "6000.0")
+        backend = manifest["backends"][0]
+        self.assertEqual(backend["transport"], "official_unity_cli_pipeline")
+        self.assertNotIn("fallback_transport", backend)
+        self.assertIn("unity_artist_cli.pipeline_reachable", manifest["activation"]["required_before_resolution"])
+        self.assertTrue(any(item["id"] == "com.unity.pipeline" for item in manifest["dependencies"]))
 
     def test_hub_setup_guidance_uses_unityagent_approval_gate(self) -> None:
         root = Path(__file__).resolve().parents[2]

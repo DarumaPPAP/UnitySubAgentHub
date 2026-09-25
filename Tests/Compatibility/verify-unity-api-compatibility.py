@@ -45,9 +45,9 @@ def main() -> int:
         fail("compatibility source must document all four maintenance buckets")
     if re.search(r"UNITY_6000_6", source):
         fail("Unity 6.6 must roll into UNITY_6000_7; no 6000.6 bucket is allowed")
-    if "2022.3." not in source or "6000." not in source or "builtin" not in source or "urp" not in source or "hdrp" not in source:
-        fail("compatibility source does not cover the four release cases")
-    if "ReleaseMatrixAccepts2022BuiltinAndUnity6Pipelines" not in tests or "UnsupportedPipelineIsRejectedBeforeMutation" not in tests:
+    if "2022.3." in source or "6000." not in source or "builtin" not in source or "urp" not in source or "hdrp" not in source:
+        fail("compatibility source does not declare only the three Unity 6+ release cases")
+    if "ReleaseMatrixAcceptsUnity6Pipelines" not in tests or "UnsupportedPipelineIsRejectedBeforeMutation" not in tests:
         fail("compatibility tests do not cover supported and pre-mutation rejection paths")
     if "name: unity-artist-unity-api-compatibility" not in skill:
         fail("current compatibility skill is missing")
@@ -61,7 +61,6 @@ def main() -> int:
 
     actual = {(str(row.get("unity_version")), str(row.get("render_pipeline"))) for row in matrix.get("rows", []) if isinstance(row, dict)}
     expected = {
-        ("2022.3 LTS", "builtin"),
         ("Unity 6.x+", "builtin"),
         ("Unity 6.x+", "urp"),
         ("Unity 6.x+", "hdrp"),

@@ -32,8 +32,6 @@ capability_contract_ref: SubAgents/artist_subagent/contracts/capability-contract
 
 compatibility:
   supported_targets:
-    - unity_version: "2022.3 LTS"
-      render_pipeline: builtin
     - unity_version: "Unity 6.x+"
       render_pipeline: builtin
     - unity_version: "Unity 6.x+"
@@ -63,8 +61,6 @@ backends:
     executable: unity-artist
     package_id: com.darumappap.unity-artist
     transport: official_unity_cli_pipeline
-    fallback_transport: official_unity_cli_bounded_batch_fallback
-    fallback_policy: concrete_cli_pipeline_gate_failure_only
     contract_ref: SubAgents/artist_subagent/contracts/backend-surface-contract.yaml
 
 runtime_profile:

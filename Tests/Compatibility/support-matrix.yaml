@@ -3,16 +3,7 @@ kind: unity_artist_release_matrix
 product: UnityArtistCLI
 package_version: "0.0.1-beta"
 transport: official_unity_cli_pipeline
-fallback_policy: concrete_cli_pipeline_gate_failure_only
-fallback_transport: official_unity_cli_bounded_batch_fallback
 rows:
-  - id: unity-2022.3-builtin
-    unity_version: "2022.3 LTS"
-    render_pipeline: builtin
-    support_tier: primary
-    supported: true
-    compatibility_backend: builtin_editor_api
-    transport: official_unity_cli_pipeline
   - id: unity-6-builtin
     unity_version: "Unity 6.x+"
     render_pipeline: builtin
@@ -35,8 +26,7 @@ rows:
     compatibility_backend: hdrp_native_api
     transport: official_unity_cli_pipeline
 unsupported_rows:
-  - "Unity 2022.3 + URP"
-  - "Unity 2022.3 + HDRP"
+  - "Unity 2022.3 (all pipelines; not currently supported)"
   - "Unity 2023 (all pipelines)"
   - "URP 14-16 formal release rows"
 verification_contract:

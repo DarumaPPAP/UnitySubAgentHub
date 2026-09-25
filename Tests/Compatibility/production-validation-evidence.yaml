@@ -1,6 +1,6 @@
-schema_version: "2.0"
+schema_version: '2.0'
 product: UnityArtistCLI
-release_version: "0.0.1-beta"
+release_version: 0.0.1-beta
 production_ready: false
 terminal_state: partial_verified
 host_validation:
@@ -12,12 +12,6 @@ host_validation:
   unsupported_preflight: passed
   provider_registry_contract: passed
   plugin_manifest_contract: passed
-official_cli_pipeline_gate:
-  status: failed_concrete
-  evidence: Tests/Compatibility/cli-pipeline-gate-evidence.yaml
-  fallback_selected: true
-  fallback_transport: official_unity_cli_bounded_batch_fallback
-  fallback_evidence: Tests/Compatibility/unity2022-3-builtin-bounded-fallback-evidence.yaml
 direct_editor_validation:
   status: verified
   unity6_builtin_fixture:
@@ -26,19 +20,17 @@ direct_editor_validation:
   unity6_urp_fixture:
     status: passed
     evidence:
-      - Tests/Compatibility/unity6-urp-primary-visual-evidence.yaml
-      - Tests/Compatibility/unity6-urp-cinematic-evidence.yaml
+    - Tests/Compatibility/unity6-urp-primary-visual-evidence.yaml
+    - Tests/Compatibility/unity6-urp-cinematic-evidence.yaml
   unity6_hdrp_fixture:
     status: passed
     evidence:
-      - Tests/Compatibility/unity6-hdrp-primary-visual-evidence.yaml
-      - Tests/Compatibility/unity6-hdrp-cinematic-evidence.yaml
-  unity2022_3_builtin_fallback:
-    status: passed
-    evidence: Tests/Compatibility/unity2022-3-builtin-bounded-fallback-evidence.yaml
+    - Tests/Compatibility/unity6-hdrp-primary-visual-evidence.yaml
+    - Tests/Compatibility/unity6-hdrp-cinematic-evidence.yaml
 e2e:
   status: verified
-  required_flow: "UnityAgent -> UnityArtistCLI -> Unity/Pipeline -> Capture/Evidence -> review"
+  required_flow: UnityAgent -> UnityArtistCLI -> Unity/Pipeline -> Capture/Evidence
+    -> review
   unity6_builtin_fixture:
     status: passed
     evidence: Tests/Compatibility/unity6-builtin-e2e-evidence.yaml
@@ -54,6 +46,17 @@ e2e:
   unity6_hdrp_cinematic:
     status: passed
     evidence: Tests/Compatibility/unity6-hdrp-cinematic-evidence.yaml
-  unity2022_3_builtin_bounded_fallback:
+historical_2022_3_evidence:
+  current_support: false
+  official_cli_pipeline_gate:
+    status: failed_concrete
+    evidence: Tests/Compatibility/cli-pipeline-gate-evidence.yaml
+    fallback_selected: true
+    fallback_transport: official_unity_cli_bounded_batch_fallback
+    fallback_evidence: Tests/Compatibility/unity2022-3-builtin-bounded-fallback-evidence.yaml
+  direct_editor_validation:
+    status: passed
+    evidence: Tests/Compatibility/unity2022-3-builtin-bounded-fallback-evidence.yaml
+  e2e:
     status: passed
     evidence: Tests/Compatibility/unity2022-3-builtin-bounded-fallback-evidence.yaml

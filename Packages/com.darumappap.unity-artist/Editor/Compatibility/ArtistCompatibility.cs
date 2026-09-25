@@ -21,7 +21,6 @@ namespace UnityArtist
 		public static bool IsSupported(string unityVersion, string renderPipeline)
 		{
 			if (string.IsNullOrWhiteSpace(unityVersion) || string.IsNullOrWhiteSpace(renderPipeline)) return false;
-			if (unityVersion.StartsWith("2022.3.", StringComparison.Ordinal)) return renderPipeline == "builtin";
 			return unityVersion.StartsWith("6000.", StringComparison.Ordinal)
 				&& (renderPipeline == "builtin" || renderPipeline == "urp" || renderPipeline == "hdrp");
 		}

@@ -36,7 +36,6 @@ FORBIDDEN_SOURCE_TOKENS = (
     "AutoRegister",
 )
 EXPECTED_ROWS = {
-    ("2022.3 LTS", "builtin"),
     ("Unity 6.x+", "builtin"),
     ("Unity 6.x+", "urp"),
     ("Unity 6.x+", "hdrp"),
@@ -88,12 +87,10 @@ def check_identity(errors: list[str]) -> None:
     if package.get("version") != version:
         error(errors, "VERSION and UnityArtist package version disagree")
     dependencies = package.get("dependencies") or {}
-    if "com.unity.pipeline" in dependencies:
-        error(errors, "the core UnityArtist package must not force the Unity 6-only Pipeline dependency on Unity 2022.3")
     if dependencies:
-        error(errors, f"current package dependencies must be empty so the bounded 2022.3 fallback can compile, got {sorted(dependencies)}")
-    if package.get("unity") != "2022.3":
-        error(errors, "package minimum Unity version must be 2022.3")
+        error(errors, f"current package dependencies must be empty; Pipeline is an explicit setup dependency, got {sorted(dependencies)}")
+    if package.get("unity") != "6000.0":
+        error(errors, "package minimum Unity version must be 6000.0")
 
 
 def check_cli_surface(errors: list[str]) -> None:
@@ -103,7 +100,7 @@ def check_cli_surface(errors: list[str]) -> None:
     missing = sorted(REQUIRED_COMMANDS - commands)
     if missing:
         error(errors, f"CLI is missing commands: {missing}")
-    if '"official_unity_cli_pipeline"' not in source or '"official_unity_cli_bounded_batch_fallback"' not in source:
+    if '"official_unity_cli_pipeline"' not in source:
         error(errors, "CLI does not declare official_unity_cli_pipeline transport")
     if '"pipeline", "install"' not in source or '"command"' not in source:
         error(errors, "CLI does not expose install and official Pipeline command delegation")
@@ -121,7 +118,7 @@ def check_editor_surface(errors: list[str]) -> None:
     for command in ("artist.inspect", "artist.plan", "artist.preview", "artist.apply", "artist.capture", "artist.evaluate", "artist.refine", "artist.cinematic", "artist.history"):
         if command not in sources:
             error(errors, f"missing Pipeline command registration: {command}")
-    for token in ("CinematicRequest", "InspectCinematicDirector", "CreateTrack", "CreateMarker", "SetGenericBinding", "Undo.RecordObject", "depth_channel", "object_id_channel", "UnityArtistBatchCommands", "bounded_non_mcp_batch_fallback"):
+    for token in ("CinematicRequest", "InspectCinematicDirector", "CreateTrack", "CreateMarker", "SetGenericBinding", "Undo.RecordObject", "depth_channel", "object_id_channel"):
         if token not in sources:
             error(errors, f"current Editor source is missing bounded Artist/Cinematic contract token: {token}")
     compatibility = EDITOR_ROOT / "Compatibility/ArtistCompatibility.cs"
@@ -139,8 +136,6 @@ def check_matrix(errors: list[str]) -> None:
         error(errors, f"formal release matrix drifted: {sorted(actual)}")
     if matrix.get("transport") != "official_unity_cli_pipeline":
         error(errors, "matrix transport must remain official_unity_cli_pipeline")
-    if matrix.get("fallback_policy") != "concrete_cli_pipeline_gate_failure_only":
-        error(errors, "fallback policy is not concrete CLI/Pipeline Gate Failure only")
     if matrix.get("verification_contract", {}).get("unsupported_result_before_mutation") is not True:
         error(errors, "unsupported result before mutation is not required")
 

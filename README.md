@@ -129,7 +129,6 @@ ArtistSubAgent Manifestが現在宣言するsupported targets:
 
 | Unity | Render Pipeline |
 |---|---|
-| 2022.3 LTS | Built-in |
 | Unity 6.x+ | Built-in |
 | Unity 6.x+ | URP |
 | Unity 6.x+ | HDRP |
