@@ -1,6 +1,6 @@
 ---
 name: unity-artist-unity-api-compatibility
-description: Maintain UnityArtistCLI compatibility across the four supported Unity/pipeline rows.
+description: Maintain UnityArtistCLI compatibility across the current Unity 6.x+ Built-in, URP, and HDRP support rows.
 ---
 
 # UnityArtistCLI Unity API Compatibility
@@ -15,4 +15,4 @@ Use this skill for C#, asmdef, rendering, Timeline, package, or Unity-version ch
 6. Do not add `GetInstanceID`, raw SceneHandle/int identity conversion, legacy component shortcuts, or an unsupported SRP API. This is the Scene identity rule and applies even when the target is an older Editor.
 7. Validate the formal matrix before any mutation. Unsupported version/pipeline combinations return a typed failure.
 
-The official Unity CLI plus Unity Pipeline is the first transport for Unity 2022.3 Built-in and Unity 6 Built-in/URP/HDRP. A fallback requires concrete connected-fixture evidence of a CLI/Pipeline Gate Failure.
+The official Unity CLI plus Unity Pipeline is the current transport for Unity 6.x+ Built-in, URP, and HDRP. Unity 2022.3 is not current production support; its bounded fallback evidence is historical only.

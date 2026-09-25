@@ -162,7 +162,7 @@ class RegistryValidatorTests(unittest.TestCase):
         for name in ("scope", "value", "approval"):
             self.assertNotIn(name, artist)
             self.assertNotIn(name, manifest["runtime_profile"])
-        self.assertTrue((root / "SubAgents/artist_subagent/contracts/camera-fov-reference-profile.yaml").is_file())
+        self.assertFalse((root / "SubAgents/artist_subagent/contracts/camera-fov-reference-profile.yaml").exists())
 
     def test_hub_setup_guidance_uses_unityagent_approval_gate(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -182,7 +182,6 @@ class RegistryValidatorTests(unittest.TestCase):
             "control_plane: unity_agent\n"
             "runtime: {owns_execution: false, owns_resolution: false, auto_install: false}\n"
             "resolution:\n"
-            "  phase_order: [registered, discovered, installed, compatible, project_bound, available, eligible, ranked]\n"
             "  eligible_lifecycle: active\n"
             "  unknown_behavior: exclude_from_resolution\n"
             "  unavailable_behavior: exclude_from_resolution\n"

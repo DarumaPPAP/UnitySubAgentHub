@@ -23,11 +23,8 @@
     "resolution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phase_order", "eligible_lifecycle", "unknown_behavior", "unavailable_behavior", "auto_install"],
+      "required": ["eligible_lifecycle", "unknown_behavior", "unavailable_behavior", "auto_install"],
       "properties": {
-        "phase_order": {
-          "const": ["registered", "discovered", "installed", "compatible", "project_bound", "available", "eligible", "ranked"]
-        },
         "eligible_lifecycle": { "const": "active" },
         "unknown_behavior": { "const": "exclude_from_resolution" },
         "unavailable_behavior": { "const": "exclude_from_resolution" },

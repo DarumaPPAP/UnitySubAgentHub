@@ -17,7 +17,6 @@ REGISTRY_PATH = "Registry/subagents.yaml"
 REGISTRY_SCHEMA_PATH = "Schemas/subagent-registry.schema.json"
 MANIFEST_SCHEMA_PATH = "Schemas/subagent-manifest.schema.json"
 MANIFEST_ROOT = "SubAgents"
-EXPECTED_PHASE_ORDER = ["registered", "discovered", "installed", "compatible", "project_bound", "available", "eligible", "ranked"]
 LIFECYCLES = {"active", "deprecated", "retired", "revoked"}
 SUBAGENT_ID = re.compile(r"^[a-z][a-z0-9_]*_subagent$")
 BACKEND_ID = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -186,8 +185,6 @@ def _validate_registry(root: Path, schema: Any, errors: list[str]) -> tuple[dict
     resolution = registry.get("resolution")
     if not isinstance(resolution, dict):
         resolution = {}
-    if resolution.get("phase_order") != EXPECTED_PHASE_ORDER:
-        errors.append("Registry/subagents.yaml: resolution phase_order must filter eligibility before ranking")
     if resolution.get("eligible_lifecycle") != "active":
         errors.append("Registry/subagents.yaml: only active lifecycle entries may be eligible")
     if resolution.get("unknown_behavior") != "exclude_from_resolution" or resolution.get("unavailable_behavior") != "exclude_from_resolution":
