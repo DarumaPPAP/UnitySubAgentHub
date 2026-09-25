@@ -5,6 +5,6 @@
 - JSON Response Envelope
 - Exact Release Matrix
 - Approvalの前提条件
-- Unity 2022.3 Built-inとURPの事前Compatibility判定
+- Unity 2022.3 Built-inとURPが現行対象外になる事前Compatibility判定
 
 Host Testが成功しても、Connected Editor / Unity Pipelineでの実行成功は意味しません。Direct EditorやE2EのEvidenceは、Licensed Fixtureを使用するEditor Matrix Workflowと`Tests/Compatibility/`で確認します。

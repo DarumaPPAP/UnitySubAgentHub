@@ -30,7 +30,7 @@ beta.10は公式資料で確認したリリース番号であり、HubまたはU
 |---|---|
 | `unity version --format json` | Backendの対応条件やEvidenceのversion表現を更新する必要があるか。 |
 | `unity commands --format json` | Artistの接続可能commandとHubの宣言を混同していないか。 |
-| `unity pipeline` | Pipelineを一次経路とする宣言、Unity 2022.3のbounded fallback条件、no-auto-install境界。 |
+| `unity pipeline` | Unity 6.x+でのPipeline経路、Unity 2022.3の歴史的なbounded fallback実測、no-auto-install境界。 |
 | `unity test` の終了コード | Hubでは実行結果を生成せず、UnityAgentのProvider／Evidence契約への影響だけを記録する。 |
 
 CLIは実験的仕様であり、実際にインストールされたCLIの `unity --help` が最終的なcommand/option authorityである。Hubのmanifestやregistryを公式資料の一覧だけで「installed」「compatible」「executable」と判定してはならない。

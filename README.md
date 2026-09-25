@@ -22,6 +22,8 @@
 > [!IMPORTANT]
 > **UnityAgentが唯一のControl Planeです。** UnitySubAgentHubはRequest Resolver、Runtime、Orchestrator、Installerではありません。HubはOptional SubAgentのmetadataとvalidationを提供し、実行可否の判断と実行そのものはUnityAgentが担当します。
 
+UnitySubAgentHub is a static registry and contract catalog for optional UnityAgent specialist SubAgents. It does not route user requests, execute specialist work, install capabilities, or own runtime orchestration.
+
 ## Role
 
 UnitySubAgentHubは、Unity開発向けOptional Specialist SubAgentのIdentity、Lifecycle、Capability、Compatibility、Dependency、Backend、Evidence契約を登録・検証するmetadata Hubです。

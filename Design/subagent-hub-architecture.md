@@ -22,14 +22,9 @@ Registry entries contain only manifest paths. A registry entry does not assert t
 
 ## Eligibility contract
 
-The lifecycle and environment checks are applied before ranking:
+The manifest declares lifecycle and environment requirements. UnityAgent decides the evaluation order and applies the checks before ranking.
 
-```text
-registered → discovered → installed → compatible → project_bound
-           → available → eligible → ranked
-```
-
-Only `active` lifecycle entries may be considered. `deprecated`, `retired`, and `revoked` entries are excluded from new capability resolution. A false or unknown installation, compatibility, project-binding, availability, or manifest activation check excludes the specialist. An unavailable capability returns `unavailable`; the Hub and UnityAgent never install a specialist to satisfy a request. Setup is a separate explicit user operation.
+Only `active` lifecycle entries may be considered. `deprecated`, `retired`, and `revoked` entries are excluded from new capability resolution. A false or unknown installation, compatibility, project-binding, availability, or manifest activation check excludes the specialist. An unavailable capability returns `unavailable`; capability resolution never installs a specialist to satisfy a request. Setup is a separate explicit user operation.
 
 Each manifest declares its own environment gates. Runtime observations such as installed version, current project, package reachability, and backend health do not belong in a committed manifest or registry snapshot.
 
