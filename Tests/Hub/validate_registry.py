@@ -344,6 +344,11 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
 
     runtime_profile = manifest.get("runtime_profile")
     if isinstance(runtime_profile, dict):
+        reference_keys = {"scope", "value", "approval"}
+        if manifest.get("schema_version") == "1.0" and not reference_keys.issubset(runtime_profile):
+            errors.append(f"{path}: v1 runtime_profile requires camera reference constraints")
+        if manifest.get("schema_version") == "2.0" and reference_keys.intersection(runtime_profile):
+            errors.append(f"{path}: v2 generic runtime_profile must not embed task-specific scope/value/approval")
         runtime_capabilities = [f"{capability.get('id')}.{operation}" for capability in capabilities if isinstance(capability, dict) for operation in capability.get("operations", [])]
         if runtime_profile.get("primary_capability") not in runtime_capabilities:
             errors.append(f"{path}: runtime_profile.primary_capability must be declared by capabilities")

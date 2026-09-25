@@ -149,6 +149,21 @@ class RegistryValidatorTests(unittest.TestCase):
         self.assertIn("unity_artist_cli.pipeline_reachable", manifest["activation"]["required_before_resolution"])
         self.assertTrue(any(item["id"] == "com.unity.pipeline" for item in manifest["dependencies"]))
 
+    def test_generic_artist_snapshot_excludes_camera_fov_reference_values(self) -> None:
+        from export_agent_snapshot import export_agent_catalog
+        root = Path(__file__).resolve().parents[2]
+        manifest = yaml.safe_load((root / "SubAgents/artist_subagent/manifest.yaml").read_text(encoding="utf-8"))
+        catalog = export_agent_catalog(root)
+        artist = catalog["profiles"]["artist_subagent"]
+        self.assertEqual(manifest["schema_version"], "2.0")
+        self.assertEqual(catalog["schema_version"], "2.0")
+        self.assertEqual(artist["goal_type"], "visual.capture")
+        self.assertEqual(artist["primary_capability"], "visual.capture")
+        for name in ("scope", "value", "approval"):
+            self.assertNotIn(name, artist)
+            self.assertNotIn(name, manifest["runtime_profile"])
+        self.assertTrue((root / "SubAgents/artist_subagent/contracts/camera-fov-reference-profile.yaml").is_file())
+
     def test_hub_setup_guidance_uses_unityagent_approval_gate(self) -> None:
         root = Path(__file__).resolve().parents[2]
         skill = (root / ".agents/skills/artist-subagent-backend-setup/SKILL.md").read_text(encoding="utf-8")
