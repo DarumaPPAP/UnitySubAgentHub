@@ -27,7 +27,7 @@ UnityAgent CapabilityRequest
 
 The adapter accepts typed argv only, always supplies an explicit project path, uses bounded cancellation, parses JSON only, and uses an allowlisted command map. It never calls arbitrary eval or chooses aesthetic intent.
 
-For Unity 2022.3 LTS + Built-in, the host always probes the Official Unity CLI/Pipeline install first. Only the recorded Unity 6.0-or-later Pipeline compatibility failure selects the bounded `official_unity_cli_bounded_batch_fallback`: `unity run` invokes the fixed `UnityArtist.UnityArtistBatchCommands.Dispatch` method with base64-encoded structured JSON and a single JSON response file. The bridge reuses `ArtistSession`, allowlists the Artist commands, loads an exact scene, and does not auto-save or persist approval tokens. It is not a second Player Framework, MCP transport, dynamic-code executor, or generic Unity CRUD surface.
+Historical experiment (not current support): for Unity 2022.3 LTS + Built-in, the host probed the Official Unity CLI/Pipeline install first. Only the recorded Unity 6.0-or-later Pipeline compatibility failure selected the bounded `official_unity_cli_bounded_batch_fallback`: `unity run` invokes the fixed `UnityArtist.UnityArtistBatchCommands.Dispatch` method with base64-encoded structured JSON and a single JSON response file. The bridge reuses `ArtistSession`, allowlists the Artist commands, loads an exact scene, and does not auto-save or persist approval tokens. It is not a second Player Framework, MCP transport, dynamic-code executor, or generic Unity CRUD surface.
 
 ## Activation contract
 
@@ -57,12 +57,11 @@ The semantic surface includes LookDev and visual direction, Lighting, Environmen
 
 | Unity version | Pipeline | Adapter | Status |
 |---|---|---|---|
-| 2022.3 LTS | Built-in | `builtin_editor_api` | primary |
 | Unity 6.x+ | Built-in | `builtin_editor_api` | primary |
 | Unity 6.x+ | URP | `urp_native_api` | primary |
 | Unity 6.x+ | HDRP | `hdrp_native_api` | primary |
 
-The manifest lists exact supported version/pipeline pairs rather than a cross product: 2022.3 LTS supports Built-in only; Unity 6.x+ supports Built-in, URP, and HDRP. The 2022.3 row is verified with the official Unity CLI + Unity Pipeline first, followed by the bounded batch fallback after the observed concrete compatibility failure. 2022.3 URP/HDRP, Unity 2023, and URP 14–16 are rejected before mutation with a typed unsupported result.
+Current manifest lists only Unity 6.x+ Built-in, URP, and HDRP. All Unity 2022.3 pipelines are excluded from current support. Historic 2022.3 bounded batch Evidence is preserved for provenance, not active fallback eligibility.
 
 ## Error and terminal states
 

@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["schema_version", "kind", "identity", "lifecycle", "installation", "activation", "capabilities", "capability_contract_ref", "compatibility", "dependencies", "backends", "runtime_profile", "evidence"],
   "properties": {
-    "schema_version": { "const": "1.0" },
+    "schema_version": { "enum": ["1.0", "2.0"] },
     "kind": { "const": "subagent_manifest" },
     "identity": {
       "type": "object",
@@ -126,7 +126,7 @@
     "runtime_profile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["audience", "goal_type", "primary_capability", "scope", "value", "approval"],
+      "required": ["audience", "goal_type", "primary_capability"],
       "properties": {
         "audience": { "type": "string", "minLength": 1 },
         "goal_type": { "type": "string", "minLength": 1 },

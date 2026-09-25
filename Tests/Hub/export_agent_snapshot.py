@@ -23,11 +23,14 @@ def export_agent_catalog(root: Path = ROOT) -> dict[str, Any]:
 
     registry = yaml.safe_load((root / REGISTRY_PATH).read_text(encoding="utf-8"))
     profiles: dict[str, dict[str, Any]] = {}
+    snapshot_version = "1.0"
     for entry in registry["entries"]:
         manifest_path = root / Path(*entry["manifest"].split("/"))
         manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
         if manifest["lifecycle"] != "active":
             continue
+        if manifest["schema_version"] == "2.0":
+            snapshot_version = "2.0"
 
         identity = manifest["identity"]
         runtime = manifest["runtime_profile"]
@@ -54,16 +57,18 @@ def export_agent_catalog(root: Path = ROOT) -> dict[str, Any]:
                 "auto_install": installation["auto_install"],
                 "required_environment": list(activation["required_before_resolution"]),
             },
-            "scope": dict(runtime["scope"]),
-            "value": dict(runtime["value"]),
-            "approval": dict(runtime["approval"]),
             "evidence": dict(evidence["runtime_provenance"]),
         }
+        if manifest["schema_version"] == "1.0":
+            profiles[identity["id"]].update(scope=dict(runtime["scope"]),
+                value=dict(runtime["value"]), approval=dict(runtime["approval"]))
 
     default_profile = registry["default_profile"]
     if default_profile not in profiles:
         raise ValueError(f"default profile is not active in the exported snapshot: {default_profile}")
-    return {"schema_version": "1.0", "default_profile": default_profile, "profiles": profiles}
+    if snapshot_version == "2.0" and any("scope" in profile for profile in profiles.values()):
+        raise ValueError("mixed v1/v2 active profiles require an explicit catalog migration")
+    return {"schema_version": snapshot_version, "default_profile": default_profile, "profiles": profiles}
 
 
 def main(argv: list[str] | None = None) -> int:

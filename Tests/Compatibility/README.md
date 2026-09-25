@@ -4,7 +4,7 @@
 
 ## Source of truth
 
-- `support-matrix.yaml`: Backendの4行Support Matrix
+- `support-matrix.yaml`: Backendの3行Unity 6+ Support Matrix
 - `production-editor-acceptance.yaml`: Direct Editor Evidence
 - `production-validation-evidence.yaml`: Host / Static / E2E Evidence
 - `release-verification.yaml`: Release Audit
@@ -13,9 +13,9 @@
 
 Unity 6 URP / HDRP Primary Visual Scenarioは各対応Evidence YAMLとVerifierが管理します。EvidenceにはPipeline-native Volume、Before / After Capture、Needs-refine Review、Guarded Refinement、Accepted Final Reviewを含みます。PNGはFixture Artifactとして扱い、PathとSHA-256をEvidenceに記録します。
 
-## 2022.3 Built-in gate
+## Historical 2022.3 Built-in gate (not current production support)
 
-Official Unity CLI + Pipelineを最初の候補として検証します。記録されたHostではUnity 2022.3.22f1上でPipeline PackageがUnity 6.0以上を要求し、固定Built-in Fixtureへの限定Batch Fallbackを別Contractで検証しました。Gate failureなしの自動Fallbackは認めません。
+過去にOfficial Unity CLI + Pipelineを最初の候補として検証しました。記録されたHostではUnity 2022.3.22f1上でPipeline PackageがUnity 6.0以上を要求し、固定Built-in Fixtureへの限定Batch Fallbackを別Contractで検証した履歴です。現行CLIの2022.3経路は削除済みです。Gate failureなしの自動Fallbackは認めません。
 
 ## Live checks
 

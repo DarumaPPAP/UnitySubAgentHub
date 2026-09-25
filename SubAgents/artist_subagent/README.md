@@ -73,12 +73,11 @@ ApplyはUndoを登録しますが、自動Saveしません。
 
 | Unity | Pipeline | Tier | Backend transport |
 |---|---|---|---|
-| 2022.3 LTS | Built-in | primary | Official Unity CLI + Unity Pipeline |
 | Unity 6.x+ | Built-in | primary | Official Unity CLI + Unity Pipeline |
 | Unity 6.x+ | URP | primary | Official Unity CLI + Unity Pipeline |
 | Unity 6.x+ | HDRP | primary | Official Unity CLI + Unity Pipeline |
 
-2022.3 URP / HDRP、Unity 2023、URP 14–16は正式対応外です。2022.3 Built-inはOfficial CLI + Pipelineを先に検証します。現在の記録では全列挙版がUnity 6.0要件で失敗した場合に限り、固定`unity run`バッチ入口`UnityArtist.UnityArtistBatchCommands.Dispatch`を限定Fallbackとして使います。任意コード実行、MCP、汎用CRUD、自動Saveは許可しません。
+Unity 2022.3（全Render Pipeline）は現行Production対象外です。過去のBatch実測はHistorical Evidenceであり、現在のFallback Transportではありません。Unity CLIはcommand / automation surface、Unity Pipelineは接続済みEditorのlocal HTTP bridgeです。MCP、自動Fallback、汎用CRUD、自動Saveは現行Backendの契約では使用しません。
 
 ## Verify
 
