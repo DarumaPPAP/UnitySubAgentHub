@@ -60,10 +60,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="${{ steps.preview-version.outputs.version }}"
           mkdir -p artifacts
           (cd Packages/com.darumappap.unity-artist && npm pack --pack-destination "$GITHUB_WORKSPACE/artifacts")
-          zip -qr "artifacts/UnityArtistCLI-Templates-${version}.zip" Templates
           (cd artifacts && sha256sum * > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
