@@ -6,8 +6,7 @@ on:
     paths:
       - AGENTS.md
       - README.md
-      - .agents/skills/artist-subagent-backend-setup/**
-      - Packages/com.darumappap.unity-artist/Documentation~/**
+      - Design/**
       - Registry/**
       - Schemas/**
       - SubAgents/**
@@ -18,8 +17,7 @@ on:
     paths:
       - AGENTS.md
       - README.md
-      - .agents/skills/artist-subagent-backend-setup/**
-      - Packages/com.darumappap.unity-artist/Documentation~/**
+      - Design/**
       - Registry/**
       - Schemas/**
       - SubAgents/**
@@ -45,11 +43,11 @@ jobs:
         run: python Tests/Hub/validate_registry.py
       - name: Test Hub validation failures and multi-agent registration
         run: python -m unittest discover -s Tests/Hub -p 'test_*.py' -v
-      - name: Export UnityAgent data-only profile snapshot
+      - name: Export and validate consumer-neutral Hub snapshot
         run: python Tests/Hub/export_agent_snapshot.py --output "$RUNNER_TEMP/subagent-catalog.yaml"
-      - name: Publish UnityAgent catalog artifact
+      - name: Publish Hub catalog artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UnityAgent-SubAgent-Catalog-Snapshot
+          name: Hub-SubAgent-Catalog-Snapshot
           path: ${{ runner.temp }}/subagent-catalog.yaml
           retention-days: 90

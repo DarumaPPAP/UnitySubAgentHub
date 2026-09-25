@@ -1,4 +1,4 @@
-schema_version: '2.0'
+schema_version: '3.0'
 kind: subagent_manifest
 identity:
   id: artist_subagent
@@ -52,15 +52,10 @@ dependencies:
 backends:
 - id: unity_artist_cli
   kind: cli
-  primary: true
   executable: unity-artist
   package_id: com.darumappap.unity-artist
   transport: official_unity_cli_pipeline
   contract_ref: SubAgents/artist_subagent/contracts/backend-surface-contract.yaml
-runtime_profile:
-  audience: artist_subagent
-  goal_type: visual.capture
-  primary_capability: visual.capture
 evidence:
   required: true
   required_artifacts:
@@ -70,10 +65,6 @@ evidence:
   - mutation_diff
   - editor_observation
   - visual_capture
-  runtime_provenance:
-    source_type: artist_subagent_reference
-    producer: UnityAgent.ReferenceImplementation.v1.1
-    provenance_token: artist_subagent
   terminal_states:
   - verified
   - partial_verified

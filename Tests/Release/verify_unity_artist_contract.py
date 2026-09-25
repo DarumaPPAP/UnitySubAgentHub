@@ -216,9 +216,9 @@ def check_catalog(errors: list[str]) -> None:
     if actual_targets != EXPECTED_ROWS:
         error(errors, "manifest supported version/pipeline pairs disagree with the Artist release matrix")
     backends = manifest.get("backends") or []
-    primary = [backend for backend in backends if backend.get("primary") is True]
-    if len(primary) != 1 or primary[0].get("id") != "unity_artist_cli" or primary[0].get("id") == identity.get("id"):
-        error(errors, "unity_artist_cli must remain a distinct primary backend id")
+    backend_ids = [backend.get("id") for backend in backends if isinstance(backend, dict)]
+    if "unity_artist_cli" not in backend_ids or identity.get("id") in backend_ids:
+        error(errors, "unity_artist_cli must remain a backend id distinct from the specialist")
     if surface.get("kind") != "specialist_backend_surface_contract":
         error(errors, "Artist backend surface contract kind is invalid")
     if surface.get("backend_commands") and set(surface["backend_commands"]) != REQUIRED_COMMANDS:

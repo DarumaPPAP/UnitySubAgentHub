@@ -1,23 +1,4 @@
-schema_version: "1.0"
+schema_version: "2.0"
 kind: subagent_registry
-control_plane: unity_agent
-
-# The Hub is a metadata and validation surface. Runtime decisions stay in UnityAgent.
-runtime:
-  owns_execution: false
-  owns_resolution: false
-  auto_install: false
-
-# Static eligibility requirements. UnityAgent owns their evaluation order.
-resolution:
-  eligible_lifecycle: active
-  unknown_behavior: exclude_from_resolution
-  unavailable_behavior: exclude_from_resolution
-  auto_install: false
-
-# Compatibility default used by UnityAgent's generic profile catalog.
-default_profile: artist_subagent
-
-# Registry membership indexes a contract; it does not mean the specialist is installed or eligible.
 entries:
   - manifest: SubAgents/artist_subagent/manifest.yaml

@@ -14,11 +14,11 @@
 
 ## Contract decisions
 
-- **FACT:** The current Hub exporter emits `SubAgentProfileCatalog` fields including `default_profile`, `audience`, `goal_type`, `primary_capability` and a primary Provider. UnityAgent's `catalog_import_gate.py` and `profiles.py` validate those fields.
+- **FACT (before vNext):** The previous Hub exporter emitted `SubAgentProfileCatalog` fields including `default_profile`, `audience`, `goal_type`, `primary_capability` and a primary Provider. UnityAgent's legacy Profile-wire import path still validates those fields.
 - **ARCHITECTURE INVARIANT:** UnityAgent remains the only Control Plane. Runtime route selection, capability resolution, current environment facts and execution do not belong to Hub data.
 - **IMPLEMENTED CHANGE:** The registry no longer specifies `resolution.phase_order`. UnityAgent owns the algorithm. The manifest still declares required activation facts and fail-closed behavior.
-- **PROPOSED CHANGE:** Remove `default_profile` and `runtime_profile` from the canonical Hub contract when a consumer-neutral Snapshot and UnityAgent-side import adapter are introduced together. Removing them from the current exporter alone would break the existing import gate.
-- **PROPOSED CHANGE:** Separate Hub manifest validity from UnityAgent's current one-profile-per-capability limitation during the Snapshot migration. The present Hub validator still enforces that consumer limitation; its removal requires a UnityAgent import check in the same migration.
+- **IMPLEMENTED CHANGE (Hub vNext):** Registry v2 is a Manifest index. Manifest v3 and the Snapshot omit `default_profile`, `runtime_profile`, Backend `primary`, and UnityAgent-specific Evidence producer fields. UnityAgent's adapter retains consumer-owned Runtime Profile values.
+- **IMPLEMENTED CHANGE (Hub vNext):** Hub validation permits overlapping active Capability declarations. UnityAgent's Import Gate enforces the current one-profile-per-capability limitation.
 
 ## Backend extraction gate
 

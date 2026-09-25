@@ -5,9 +5,9 @@
   "description": "Portable SubAgent identity and contract metadata. Installation and environment eligibility are resolved by UnityAgent at runtime.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "kind", "identity", "lifecycle", "installation", "activation", "capabilities", "capability_contract_ref", "compatibility", "dependencies", "backends", "runtime_profile", "evidence"],
+  "required": ["schema_version", "kind", "identity", "lifecycle", "installation", "activation", "capabilities", "capability_contract_ref", "compatibility", "dependencies", "backends", "evidence"],
   "properties": {
-    "schema_version": { "enum": ["1.0", "2.0"] },
+    "schema_version": { "const": "3.0" },
     "kind": { "const": "subagent_manifest" },
     "identity": {
       "type": "object",
@@ -109,83 +109,25 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "kind", "primary", "contract_ref"],
+        "required": ["id", "kind", "contract_ref"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
           "kind": { "enum": ["cli", "unity_package", "http", "rpc", "library"] },
-          "primary": { "type": "boolean" },
           "executable": { "type": "string", "minLength": 1 },
           "package_id": { "type": "string", "minLength": 1 },
           "transport": { "type": "string", "minLength": 1 },
-          "fallback_transport": { "type": "string", "minLength": 1 },
-          "fallback_policy": { "type": "string", "minLength": 1 },
           "contract_ref": { "type": "string", "minLength": 1 }
-        }
-      }
-    },
-    "runtime_profile": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["audience", "goal_type", "primary_capability"],
-      "properties": {
-        "audience": { "type": "string", "minLength": 1 },
-        "goal_type": { "type": "string", "minLength": 1 },
-        "primary_capability": { "type": "string", "minLength": 1 },
-        "scope": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["default_target_guid", "component_type", "property_paths", "mutation_channels", "max_targets"],
-          "properties": {
-            "default_target_guid": { "type": "string", "minLength": 1 },
-            "component_type": { "type": "string", "minLength": 1 },
-            "property_paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
-            "mutation_channels": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
-            "max_targets": { "type": "integer", "minimum": 1 }
-          }
-        },
-        "value": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["type", "unit", "minimum", "maximum", "maximum_exclusive"],
-          "properties": {
-            "type": { "type": "string", "minLength": 1 },
-            "unit": { "type": "string", "minLength": 1 },
-            "minimum": { "type": "number" },
-            "maximum": { "type": "number" },
-            "maximum_exclusive": { "type": "boolean" }
-          }
-        },
-        "approval": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["default_minimum", "default_maximum", "minimum_exclusive", "maximum_exclusive"],
-          "properties": {
-            "default_minimum": { "type": "number" },
-            "default_maximum": { "type": "number" },
-            "minimum_exclusive": { "type": "boolean" },
-            "maximum_exclusive": { "type": "boolean" }
-          }
         }
       }
     },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["required", "required_artifacts", "runtime_types", "runtime_provenance", "terminal_states", "contract_ref"],
+      "required": ["required", "required_artifacts", "runtime_types", "terminal_states", "contract_ref"],
       "properties": {
         "required": { "const": true },
         "required_artifacts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
         "runtime_types": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
-        "runtime_provenance": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["source_type", "producer", "provenance_token"],
-          "properties": {
-            "source_type": { "type": "string", "minLength": 1 },
-            "producer": { "type": "string", "minLength": 1 },
-            "provenance_token": { "type": "string", "minLength": 1 }
-          }
-        },
         "terminal_states": {
           "type": "array",
           "minItems": 1,
@@ -197,3 +139,4 @@
     }
   }
 }
+

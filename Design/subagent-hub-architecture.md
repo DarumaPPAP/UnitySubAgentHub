@@ -1,57 +1,57 @@
 # UnitySubAgentHub Architecture
 
-## Purpose and authority
+## Authority
 
-UnitySubAgentHub's Hub contract surface is data and validation for optional specialist SubAgents. It indexes each specialist's contract, validates the contract shape and cross references, and records lifecycle state. It does not provide a runtime, orchestrator, or request resolver.
+UnitySubAgentHubはOptional Specialistの静的なRegistry、Manifest、Schema、Contract参照とValidationを所有します。UnityAgentが唯一のControl Planeです。
 
-The first Artist backend implementation remains co-located in this repository for compatibility during the transition. That source and its release tooling belong to the Artist backend; the Hub registry and validator do not dispatch or execute it.
+| Hub owns | UnityAgent owns |
+|---|---|
+| Registry index、Specialist identity、Lifecycle | User request routing、Task Fingerprint、CapabilityRequest |
+| 静的Capability、Compatibility、Dependency、Backend参照 | Environment discovery、Project binding、Capability / Provider resolution |
+| Activation requirement、Evidence interface、Contract参照 | Policy、Approval、Execution、Retry / fallback、Persistence、Evidence normalization |
+| Manifest / Snapshot schemaと検証 | 現在のProfile値、Import判断、Runtime Context、Setup |
 
-UnityAgent is the only Control Plane. It owns policy, approval, environment discovery, project binding, compatibility checks, capability resolution, execution, fallback, retries, and evidence normalization. The Hub supplies metadata; UnityAgent decides whether a specialist can participate in a request.
+HubのRegistryやSnapshotはInstall状態、Project状態、現在のPlatform、Provider health、選択済みSkill / Providerを表しません。RegistryからBackendを実行・Installしません。
 
-## Sources of truth
+## Canonical contracts
 
-| Concern | Canonical source |
+| Concern | Source |
 |---|---|
 | Registry index | `Registry/subagents.yaml` |
-| Specialist identity, lifecycle, optional installation, capabilities, compatibility, dependencies, backends, evidence | `SubAgents/<id>/manifest.yaml` |
-| Manifest and registry structure | `Schemas/` |
-| Specialist-specific behavior and acceptance | Paths linked by the manifest |
-| Resolution and execution policy | UnityAgent |
+| Specialist静的契約 | `SubAgents/<id>/manifest.yaml` |
+| Registry / Manifest / Snapshot schema | `Schemas/` |
+| Specialist固有の詳細契約 | Manifestから参照されるファイル |
+| Runtime ProfileとImport Adapter | UnityAgent |
 
-Registry entries contain only manifest paths. A registry entry does not assert that a specialist is installed, project-bound, compatible, or eligible.
+Registry v2はManifest Pathのみを索引化します。Manifest v3はIdentity、Lifecycle、Optional Installation、Activation、Capabilities、対応するUnity Version / Render Pipelineの組、Dependencies、Backend identities、Evidence requirementsを宣言します。`audience`、`goal_type`、`primary_capability`、既定Profile、特定TaskのCamera GUID、Approval範囲はHubの契約に含めません。
 
-## Eligibility contract
+## Lifecycle and eligibility
 
-The manifest declares lifecycle and environment requirements. UnityAgent decides the evaluation order and applies the checks before ranking.
+`active`は新規選出の候補です。`deprecated`、`retired`、`revoked`は履歴としてManifestとSnapshotに残せますが、新規選出から除外します。Manifestはrequired activation factsとfalse / unknown時の除外を宣言します。UnityAgentが現在のFactを観測し、判定順序とRankingを決めます。未導入、非互換、未Bind、利用不可、false、unknownを成功と扱いません。Setupは明示的な別操作です。
 
-Only `active` lifecycle entries may be considered. `deprecated`, `retired`, and `revoked` entries are excluded from new capability resolution. A false or unknown installation, compatibility, project-binding, availability, or manifest activation check excludes the specialist. An unavailable capability returns `unavailable`; capability resolution never installs a specialist to satisfy a request. Setup is a separate explicit user operation.
+## Snapshot and import boundary
 
-Each manifest declares its own environment gates. Runtime observations such as installed version, current project, package reachability, and backend health do not belong in a committed manifest or registry snapshot.
+`Tests/Hub/export_agent_snapshot.py`は登録されたManifestを`subagent_catalog_snapshot` v1として出力します。各EntryはRepository相対の`manifest_ref`と静的な`manifest`を持ちます。ExporterはHub SchemaとManifest Schemaで出力を検証します。Hub CIは`Hub-SubAgent-Catalog-Snapshot`を公開します。
 
-## Identity and backend separation
+```text
+Hub Manifest → Hub Snapshot → UnityAgent Offline Import Adapter → UnityAgent Runtime Catalog
+```
 
-`identity.id` names the delegated specialist (for example, `artist_subagent`). Each backend has its own identifier (currently `unity_artist_cli`). The two identities must differ. A specialist may reference more than one backend, and backend implementation can change without changing the specialist identity or capability contract.
+SnapshotはUnityAgentの`SubAgentProfileCatalog` wire shapeではありません。UnityAgentのAdapterはSnapshotのbytes / digest、Identity、Provider、Capability、Activation、Evidenceを確認し、UnityAgent側の`audience`、`goal_type`、`primary_capability`、既定Profile、Reference scope / approval、Evidence producerを保持したImport Planを作ります。新しいSpecialistにConsumer固有Profileがない場合は自動推測せず明示的なImport Migrationを要求します。Artifactの公開だけではUnityAgent Catalogを変更しません。
 
-## Adding a specialist
+Hub ValidationはManifestとしての合法性を判定します。例えば複数のactive Specialistが同じCapabilityを宣言しても静的契約としては合法です。現行UnityAgentが一意に解決できない場合、そのConsumer制約はUnityAgent Import Gateが拒否します。Hubは現在のUnityAgent Resolver制約をRegistryの汎用規則にしません。
 
-1. Create `SubAgents/<id>/manifest.yaml` using `Schemas/subagent-manifest.schema.json`.
-2. Declare optional installation and `auto_install: false`; list all activation checks and fail-closed behavior. Every required dependency, including the primary backend, must have a gate listed in `activation.required_before_resolution`.
-3. Declare resolver-visible capabilities, exact supported version/pipeline target pairs, dependencies, backend references, evidence requirements, and lifecycle. Do not encode compatibility as independent version and pipeline arrays when the support matrix excludes some combinations.
-4. Add only the manifest path to `Registry/subagents.yaml`.
-5. Run `python Tests/Hub/validate_registry.py` and `python -m unittest discover -s Tests/Hub -p 'test_*.py'`.
-6. Add any specialist-specific contract tests and preserve its existing CI.
+Hub ManifestはRuntime Context値やTaskごとのSkill選択を所有しません。Context ContractやSkill参照を追加する場合も静的な受入契約と発見用Metadataに限り、既存のUnityAgent Context Assemblyと重複させません。
 
-Registering a specialist is data-only. It must not require UnityAgent source changes as long as the manifest uses the shared contract and UnityAgent already supports the declared capability semantics.
+## Backend ownership
 
-`Tests/Hub/export_agent_snapshot.py` generates a data-only profile snapshot from active manifests in the form consumed by the current UnityAgent ReferenceImplementation. CI publishes it as `UnityAgent-SubAgent-Catalog-Snapshot`; UnityAgent source is not copied into or invoked by the Hub. The snapshot is an input artifact only and does not claim that a backend is installed, compatible, bound to the current project, or ready. UnityAgent checks those live gates before ranking. The Hub declares the `unity_artist_cli.compatible` activation gate and supported targets; it does not generate or observe that Environment Fact. Current UnityAgent Environment discovery derives the fact from observed Unity/version, render-pipeline, support-tier, and compatibility-backend metadata as `true`, `false`, or `unknown`; false and unknown remain excluded from resolution. The current UnityAgent profile resolver also requires exactly one profile for a capability, so the Hub validator rejects overlapping active runtime capability ids until UnityAgent supports ranking them.
+`artist_subagent`はSpecialist identity、`unity_artist_cli`はBackend identityです。Artist Package、CLI、Installer、Compatibility Tests、Release workflows、Backend固有SkillsとVersionはArtist Backend Productの責務です。現在は移行例外として同一Repositoryにありますが、Hub CIはBackend実行を必要としません。配布URLとRelease tagをUnityAgent Installerが参照しているため、物理分離の条件は[Authority cleanup audit](authority-cleanup-audit.md)に記録します。
 
-The Snapshot Import Gate is an explicit UnityAgent-side offline operation. It verifies the exact Snapshot bytes, compares them with the checked-in Profile Catalog, and emits a read-only Import Plan. It does not download Artifacts, bind a Project, install a specialist, or hot-reload a running Run. The Artist Evidence producer is aligned here with the current UnityAgent ReferenceImplementation contract (`UnityAgent.ReferenceImplementation.v1.1`); changing that producer is a reviewed contract change, not an importer-side normalization.
+## Add, deprecate and retire a specialist
 
-The Artist manifest currently exposes only `artist.camera.inspect`, `artist.camera.refine`, and `visual.capture` to the snapshot. Its wider CLI commands and operation contracts are not resolver-visible profiles until explicit capability entries and a supported UnityAgent runtime profile are added.
+1. `Schemas/subagent-manifest.schema.json`に適合する`SubAgents/<id>/manifest.yaml`を作成します。IdentityとBackend IDを分け、Optional Install、`auto_install: false`、required dependency gates、対応Target組、Evidence interfaceを宣言します。
+2. Manifest PathだけをRegistryに追加し、`python Tests/Hub/validate_registry.py`、Hub Unit Tests、Snapshot exportを実行します。
+3. UnityAgentが新しいCapability semanticsを扱えるか別に確認します。Consumer Profileが必要ならUnityAgent側でImport Migrationを実施します。
+4. 廃止時はLifecycleを`deprecated`、`retired`または`revoked`へ変更します。既存利用・配布URL・Consumer参照を監査し、履歴が不要になるまでIdentityを再利用しません。
 
-## Boundaries
-
-- Hub validation reads metadata and referenced contracts; it does not discover local installations or project state.
-- Hub code must not run a specialist, resolve user requests, install packages, or mutate projects.
-- Specialist backend code is implementation owned by that specialist and is not part of the Hub contract or validation runtime. The co-located Artist implementation is a transition exception in repository layout only.
-- `Legacy/MyUnityMCP-1.1.1/` is immutable migration history and is outside this architecture change.
+`Legacy/MyUnityMCP-1.1.1/`は現在のHubまたはBackend Runtimeではありません。現行Release Validatorが一部を参照するため、参照を移行するまでmainからの除去を保留します。公開TagとGit履歴は変更しません。
