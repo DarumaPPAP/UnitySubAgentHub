@@ -253,9 +253,7 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
     _valid_reference(root, manifest.get("capability_contract_ref"), f"{path}: capability_contract_ref", errors)
 
     compatibility = manifest.get("compatibility")
-    if isinstance(compatibility, dict):
-        _valid_reference(root, compatibility.get("support_matrix_ref"), f"{path}: compatibility.support_matrix_ref", errors)
-    else:
+    if not isinstance(compatibility, dict):
         errors.append(f"{path}: compatibility contract is required")
 
     dependencies = manifest.get("dependencies")
@@ -308,7 +306,6 @@ def _validate_manifest(root: Path, path: str, schema: Any, errors: list[str]) ->
     if not isinstance(evidence, dict) or evidence.get("required") is not True:
         errors.append(f"{path}: evidence must be required")
     else:
-        _valid_reference(root, evidence.get("contract_ref"), f"{path}: evidence.contract_ref", errors)
         runtime_types = evidence.get("runtime_types")
         if not isinstance(runtime_types, list) or not runtime_types or any(not isinstance(value, str) or not value for value in runtime_types):
             errors.append(f"{path}: evidence.runtime_types must list UnityAgent evidence types")

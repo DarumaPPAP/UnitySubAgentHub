@@ -22,7 +22,7 @@ ArtistSubAgentはUnityのVisual Art、LookDev、Lighting、Environment、Camera�
 - `artist.camera.refine`
 - `visual.capture`
 
-Backend内部のコマンド一覧はResolver-visible Capabilityを増やしません。詳細は[Capability contract](contracts/capability-contracts.yaml)と[Backend surface contract](contracts/backend-surface-contract.yaml)を参照してください。
+Backend内部のコマンド一覧はResolver-visible Capabilityを増やしません。Hubは[Capability contract](contracts/capability-contracts.yaml)と[Backend interface](contracts/backend-surface-contract.yaml)を所有します。コマンドと安全性のRelease確認は[Backend release contract](../../Tests/Release/artist-backend-release-contract.yaml)で行います。
 
 | Unity | Render Pipeline |
 |---|---|
@@ -36,7 +36,7 @@ Unity 2022.3は現行Production対象外です。過去の実測はHistorical Ev
 
 ManifestはBackend availability、Compatibility、Project binding、Package installation、Pipeline reachabilityを必要なEnvironment factsとして宣言します。UnityAgentが現在値を観測し、falseまたはunknownを候補から除外します。Capability解決時の自動Installは行いません。SetupはUnityAgentの`doctor → setup plan → approval → setup apply → doctor`による明示的な別操作です。
 
-Evidence types、required artifacts、terminal statesと[Evidence contract](../../Tests/Compatibility/release-verification.yaml)はManifestから参照します。Runtime Evidence producer、正規化、永続化はUnityAgentの責務です。`blocked_by_environment`は成功ではありません。
+ManifestはEvidence types、required artifacts、terminal statesのみを宣言します。[Release verification](../../Tests/Compatibility/release-verification.yaml)はBackend側の検証記録であり、Hub Manifestの参照先ではありません。Runtime Evidence producer、正規化、永続化はUnityAgentの責務です。`blocked_by_environment`は成功ではありません。
 
 ## UnityAgent import boundary
 

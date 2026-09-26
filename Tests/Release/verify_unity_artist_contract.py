@@ -21,6 +21,7 @@ GATE_EVIDENCE_PATH = ROOT / "Tests/Compatibility/cli-pipeline-gate-evidence.yaml
 CLI_REFERENCE_AUDIT_PATH = ROOT / "Tests/Compatibility/unity-cli-reference-audit.yaml"
 MANIFEST_PATH = ROOT / "SubAgents/artist_subagent/manifest.yaml"
 SURFACE_PATH = ROOT / "SubAgents/artist_subagent/contracts/backend-surface-contract.yaml"
+RELEASE_CONTRACT_PATH = ROOT / "Tests/Release/artist-backend-release-contract.yaml"
 REPO_SKILLS_ROOT = ROOT / ".agents/skills"
 LEGACY_PLUGIN_ROOT = ROOT / ".agents/plugins/unity-artist"
 
@@ -194,6 +195,7 @@ def check_cli_reference_audit(errors: list[str]) -> None:
 def check_catalog(errors: list[str]) -> None:
     manifest = read_yaml(errors, MANIFEST_PATH)
     surface = read_yaml(errors, SURFACE_PATH)
+    release_contract = read_yaml(errors, RELEASE_CONTRACT_PATH)
     identity = manifest.get("identity") or {}
     if manifest.get("kind") != "subagent_manifest" or identity.get("name") != "ArtistSubAgent":
         error(errors, "canonical ArtistSubAgent manifest identity is invalid")
@@ -219,15 +221,21 @@ def check_catalog(errors: list[str]) -> None:
     backend_ids = [backend.get("id") for backend in backends if isinstance(backend, dict)]
     if "unity_artist_cli" not in backend_ids or identity.get("id") in backend_ids:
         error(errors, "unity_artist_cli must remain a backend id distinct from the specialist")
-    if surface.get("kind") != "specialist_backend_surface_contract":
-        error(errors, "Artist backend surface contract kind is invalid")
-    if surface.get("backend_commands") and set(surface["backend_commands"]) != REQUIRED_COMMANDS:
+    if surface.get("kind") != "specialist_backend_interface" or surface.get("backend_identity") != "unity_artist_cli":
+        error(errors, "Artist backend interface identity is invalid")
+    if surface.get("execution_boundary") != "unity_agent_tool_broker":
+        error(errors, "Artist backend must execute through UnityAgent ToolBroker")
+    if set(surface.get("forbidden_authority") or []) != {"global_routing", "policy", "approval", "provider_resolution", "retry_control", "persistence"}:
+        error(errors, "Artist backend interface must not own Control Plane authority")
+    if surface.get("context_receipt") != ["generated", "transported", "received"]:
+        error(errors, "Artist backend interface must declare the context receipt lifecycle")
+    if set(release_contract.get("backend_commands") or []) != REQUIRED_COMMANDS:
         error(errors, "backend command set disagrees with CLI contract")
-    forbidden = set(surface.get("forbidden_surface") or [])
+    forbidden = set(release_contract.get("forbidden_surface") or [])
     if not {"mcp_transport", "generic_gameobject_crud", "generic_hierarchy_crud", "arbitrary_eval"}.issubset(forbidden):
-        error(errors, "backend surface must continue to forbid MCP and generic CRUD/eval")
-    if surface.get("automatic_save") is not False or surface.get("arbitrary_eval") is not False:
-        error(errors, "Artist backend surface must disable automatic save and arbitrary eval")
+        error(errors, "backend release contract must continue to forbid MCP and generic CRUD/eval")
+    if release_contract.get("automatic_save") is not False or release_contract.get("arbitrary_eval") is not False:
+        error(errors, "Artist backend release contract must disable automatic save and arbitrary eval")
 
 def check_agent_distribution(errors: list[str]) -> None:
     if LEGACY_PLUGIN_ROOT.exists():

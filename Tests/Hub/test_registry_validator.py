@@ -14,7 +14,7 @@ from validate_registry import validate_repository
 def manifest(subagent_id: str, backend_id: str) -> dict:
     capability_prefix = subagent_id.removesuffix("_subagent")
     return {
-        "schema_version": "3.0",
+        "schema_version": "4.0",
         "kind": "subagent_manifest",
         "identity": {"id": subagent_id, "name": subagent_id.replace("_", " ").title(), "version": "1.0.0"},
         "lifecycle": "active",
@@ -28,18 +28,16 @@ def manifest(subagent_id: str, backend_id: str) -> dict:
         "capability_contract_ref": "Contracts/capabilities.yaml",
         "compatibility": {
             "supported_targets": [{"unity_version": "Unity 6.x+", "render_pipeline": "builtin"}],
-            "support_matrix_ref": "Contracts/support-matrix.yaml",
         },
         "dependencies": [
             {"id": backend_id, "kind": "backend", "required": True, "eligibility_gate": "backend_available"}
         ],
-        "backends": [{"id": backend_id, "kind": "cli", "executable": backend_id, "contract_ref": "Contracts/backend.yaml"}],
+        "backends": [{"id": backend_id, "kind": "cli", "contract_ref": "Contracts/backend.yaml"}],
         "evidence": {
             "required": True,
             "required_artifacts": ["provider_result"],
             "runtime_types": ["state_observation"],
             "terminal_states": ["verified", "partial_verified", "blocked_by_environment"],
-            "contract_ref": "Contracts/evidence.yaml",
         },
     }
 
@@ -127,7 +125,7 @@ class RegistryValidatorTests(unittest.TestCase):
         self.assertEqual(rows, expected)
         self.assertEqual(package["unity"], "6000.0")
         backend = manifest["backends"][0]
-        self.assertEqual(backend["transport"], "official_unity_cli_pipeline")
+        self.assertEqual(backend["kind"], "cli")
         self.assertNotIn("fallback_transport", backend)
         self.assertIn("unity_artist_cli.pipeline_reachable", manifest["activation"]["required_before_resolution"])
         self.assertTrue(any(item["id"] == "com.unity.pipeline" for item in manifest["dependencies"]))
@@ -138,9 +136,13 @@ class RegistryValidatorTests(unittest.TestCase):
         manifest = yaml.safe_load((root / "SubAgents/artist_subagent/manifest.yaml").read_text(encoding="utf-8"))
         snapshot = export_hub_snapshot(root)
         artist = snapshot["specialists"][0]["manifest"]
-        self.assertEqual(manifest["schema_version"], "3.0")
+        self.assertEqual(manifest["schema_version"], "4.0")
+        self.assertEqual(snapshot["schema_version"], "2.0")
         self.assertEqual(snapshot["kind"], "subagent_catalog_snapshot")
         self.assertEqual(artist, manifest)
+        self.assertNotIn("support_matrix_ref", artist["compatibility"])
+        self.assertNotIn("contract_ref", artist["evidence"])
+        self.assertEqual(set(artist["backends"][0]), {"id", "kind", "contract_ref"})
         self.assertEqual([], validate_snapshot(snapshot, root))
         for name in ("runtime_profile", "goal_type", "primary_capability", "audience"):
             self.assertNotIn(name, artist)
