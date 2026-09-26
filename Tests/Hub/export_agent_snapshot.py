@@ -62,7 +62,7 @@ def export_hub_snapshot(root: Path = ROOT) -> dict[str, Any]:
         reference = entry["manifest"]
         manifest = yaml.safe_load((root / Path(*reference.split("/"))).read_text(encoding="utf-8"))
         specialists.append({"manifest_ref": reference, "manifest": manifest})
-    snapshot = {"schema_version": "1.0", "kind": "subagent_catalog_snapshot", "specialists": specialists}
+    snapshot = {"schema_version": "2.0", "kind": "subagent_catalog_snapshot", "specialists": specialists}
     errors = validate_snapshot(snapshot, root)
     if errors:
         raise ValueError("Hub snapshot is invalid:\n" + "\n".join(errors))

@@ -23,7 +23,7 @@ HubのRegistryやSnapshotはInstall状態、Project状態、現在のPlatform、
 | Specialist固有の詳細契約 | Manifestから参照されるファイル |
 | Runtime ProfileとImport Adapter | UnityAgent |
 
-Registry v2はManifest Pathのみを索引化します。Manifest v3はIdentity、Lifecycle、Optional Installation、Activation、Capabilities、対応するUnity Version / Render Pipelineの組、Dependencies、Backend identities、Evidence requirementsを宣言します。`audience`、`goal_type`、`primary_capability`、既定Profile、特定TaskのCamera GUID、Approval範囲はHubの契約に含めません。
+Registry v2はManifest Pathのみを索引化します。Manifest v4はIdentity、Lifecycle、Optional Installation、Activation、Capabilities、対応するUnity Version / Render Pipelineの組、Dependencies、Backend identities、Evidence requirementsを宣言します。Compatibility MatrixとRelease EvidenceはBackend Product側に置き、Manifestから参照しません。`audience`、`goal_type`、`primary_capability`、既定Profile、特定TaskのCamera GUID、Approval範囲はHubの契約に含めません。
 
 ## Lifecycle and eligibility
 
@@ -31,7 +31,7 @@ Registry v2はManifest Pathのみを索引化します。Manifest v3はIdentity�
 
 ## Snapshot and import boundary
 
-`Tests/Hub/export_agent_snapshot.py`は登録されたManifestを`subagent_catalog_snapshot` v1として出力します。各EntryはRepository相対の`manifest_ref`と静的な`manifest`を持ちます。ExporterはHub SchemaとManifest Schemaで出力を検証します。Hub CIは`Hub-SubAgent-Catalog-Snapshot`を公開します。
+`Tests/Hub/export_agent_snapshot.py`は登録されたManifestを`subagent_catalog_snapshot` v2として出力します。各EntryはRepository相対の`manifest_ref`と静的な`manifest`を持ちます。ExporterはHub SchemaとManifest Schemaで出力を検証します。Hub CIは`Hub-SubAgent-Catalog-Snapshot`を公開します。
 
 ```text
 Hub Manifest → Hub Snapshot → UnityAgent Offline Import Adapter → UnityAgent Runtime Catalog
