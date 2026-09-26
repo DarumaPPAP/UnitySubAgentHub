@@ -9,6 +9,8 @@
 - `Schemas/`: Registry / Manifestの共通Shape
 - Manifestが参照するContract: Specialist固有の詳細仕様と受け入れ条件
 - `subagent-hub-architecture.md`: HubとUnityAgentの責任境界
+- `specialist-expansion-architecture.md`: Registered Specialist候補の境界とEval条件
+- `legacy-capability-salvage-audit.md` / `legacy-capability-salvage.csv`: Legacy 77 ToolのSource inventory、分類、削除Gate
 
 UnityAgentが唯一のControl Planeです。Hubの記録はSpecialistが導入済み、eligible、実行可能であることを示しません。HubはRuntime、Orchestrator、Request Resolver、Installerではありません。
 
