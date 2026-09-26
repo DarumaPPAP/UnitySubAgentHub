@@ -1,0 +1,9 @@
+# WorldCreatorSubAgent Planning-only候補契約
+
+`contracts/capability-contracts.yaml`はHub登録前の候補契約です。`world.plan`はHigh-levelなWorld GoalをStructured World Planへ分解します。Work Packageの`domain_hint`はUnityAgentが後でRouteを再解決するためのヒントであり、WorldCreatorによるSubAgent呼出しではありません。
+
+このCandidateは`planning_only`かつ`provider_resolution: not_required`です。Provider、ProviderResult、Generated→Transported→Received Receiptは存在しません。Plan Artifactは生成元Context IDとFingerprintを参照し、UnityAgentが一致を検証します。Human Reviewは必須で、自動Visual Acceptanceと直接Unity Mutationは禁止です。
+
+旧`world.compile_workflow`と`world.create_review_handoff`はPlanningとReviewの知識として契約へ回収します。旧`world.start_preflight`はExecution Frontendであり移植しません。WorldCreatorはUnityAgentのRouting、Approval、Apply、Save、Bakeを所有しません。
+
+Production昇格は保留です。Hub Manifest v4はBackendを1件以上要求し、UnityAgentのProduction Profileは`provider_id`を要求します。Planning reasoningを実行するSurfaceのAuthorityが未定義のため、架空Providerで穴埋めしません。Compile / Editor / Player / Target Deviceは`NOT_EVALUATED_RUNTIME`です。
