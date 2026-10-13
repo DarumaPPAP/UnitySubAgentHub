@@ -1,0 +1,31 @@
+name: Unity CI Windows and Linux host
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'ci/**'
+      - '.github/workflows/unity-ci-host.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host:
+    name: Unity CI host (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate existing fixture structure (host only)
+        run: python ci/verify/validate_unity_fixtures.py
+      - name: Test discovery, execution states and platform entrypoints (host only)
+        run: python -m unittest discover -s ci/verify -p 'test_unity_ci*.py' -v

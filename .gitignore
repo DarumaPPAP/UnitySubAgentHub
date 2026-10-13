@@ -111,6 +111,7 @@ InitTestScene*.unity*
 **/obj/
 **/__pycache__/
 /test-results.xml
+/artifacts/
 
 # Disposable UnityArtistCLI verification fixture caches
 /ci/unity-projects/artist-e2e/Library/

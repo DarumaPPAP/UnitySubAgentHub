@@ -1,5 +1,12 @@
 # P7 Unity CI foundation
 
+P9 adds Windows/Linux Editor discovery and platform entrypoints. See
+[the current Japanese execution guide](../../ci/README.md). Compatibility now
+records BLOCKED_NOT_RUN artifacts in its host job and skips the Editor job when
+UNITY_LICENSE_READY is not true; an enabled Editor job retains strict nonzero
+failure/blocked exits. The following P7 implementation record otherwise remains
+historical; its 27-test count describes that stage.
+
 This inventory prepares execution; it does not add verified Editor versions or
 current render-pipeline evidence to the product support matrix. `ci/unity-matrix.yaml`
 is JSON-compatible YAML and is the source of fixture selection.

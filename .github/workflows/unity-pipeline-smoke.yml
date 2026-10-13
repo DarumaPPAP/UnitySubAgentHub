@@ -23,7 +23,7 @@ jobs:
       - name: Validate migrated fixture structure (static only)
         run: python ci/verify/validate_unity_fixtures.py
       - name: Test resolver and evidence rejection
-        run: python -m unittest discover -s ci/verify -p 'test_unity_ci.py' -v
+        run: python -m unittest discover -s ci/verify -p 'test_unity_ci*.py' -v
       - name: Select fixtures and detect relevant changes inside job
         id: matrix
         env:
