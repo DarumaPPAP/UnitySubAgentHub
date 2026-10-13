@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import argparse
 import subprocess
+import sys
 from unittest.mock import patch
 import unity_ci as ci
 
@@ -105,6 +106,15 @@ class RunnerTests(unittest.TestCase):
                 kwargs['stdout'].write('Editor stdout evidence\n'); kwargs['stdout'].flush()
                 kwargs['stderr'].write('Editor stderr evidence\n'); kwargs['stderr'].flush()
                 log = Path(command[command.index('-logFile')+1])
+                if mode == 'launch-error':
+                    raise OSError('Editor process could not start')
+                if mode == 'timeout':
+                    log.write_text('Editor started but timed out')
+                    raise subprocess.TimeoutExpired(command, 3600)
+                if mode == 'malformed-results':
+                    log.write_text('Editor ran with invalid NUnit')
+                    Path(command[command.index('-testResults')+1]).write_text('<test-run')
+                    return subprocess.CompletedProcess(command, 0)
                 if mode == 'license':
                     log.write_text('No valid license found')
                     return subprocess.CompletedProcess(command,1)
@@ -116,17 +126,20 @@ class RunnerTests(unittest.TestCase):
                     self.assertNotIn('-nographics',command)
                 else:
                     self.assertIn('-nographics',command)
-                if mode in {'pass','source-mutation'} or mode.startswith('render-'):
+                if mode in {'pass','source-mutation','assertion-fail'} or mode.startswith('render-'):
                     Path(command[command.index('-testResults')+1]).write_text('<test-run result="Passed" total="1" passed="1"><test-case result="Passed"/></test-run>')
                     copied = Path(command[command.index('-projectPath')+1])
                     (copied / 'Packages/packages-lock.json').write_text('{"dependencies":{"com.unity.test-framework":{"version":"1.3.9"}}}')
+                if mode == 'assertion-fail':
+                    Path(command[command.index('-testResults')+1]).write_text('<test-run result="Failed" total="1" passed="0"><test-case result="Failed"/></test-run>')
+                    return subprocess.CompletedProcess(command, 1)
                 if mode == 'source-mutation':
                     (project/'ProjectSettings/ProjectVersion.txt').write_text('mutated during execution')
                 if mode in {'render-valid','render-null'}:
                     (output/'pipeline-smoke.png').write_bytes(b'\x89PNG\r\n\x1a\nHOST_TEST_ONLY')
                     (output/'graphics-device.json').write_text(json.dumps({'editorVersion':'6000.6.0f1','deviceType':'Null' if mode=='render-null' else 'Vulkan','pixelVariation':0.7}))
                 return subprocess.CompletedProcess(command,0)
-            with patch.object(ci,'ROOT',root), patch.object(ci,'MATRIX',matrix), patch.object(ci.subprocess,'run',side_effect=execute), patch.dict(os.environ,{'UNITY_EDITOR':'/bin/true','UNITY_LICENSE_READY':'true','UNITY_GRAPHICS_READY':'true','GITHUB_SHA':'f'*40}):
+            with patch.object(ci,'ROOT',root), patch.object(ci,'MATRIX',matrix), patch.object(ci.subprocess,'run',side_effect=execute), patch.dict(os.environ,{'UNITY_EDITOR':sys.executable,'UNITY_LICENSE_READY':'true','UNITY_GRAPHICS_READY':'true','GITHUB_SHA':'f'*40}):
                 code = ci.run(argparse.Namespace(fixture='fake',output=str(output),canary=False))
             self.assertEqual((output/'project/unowned.txt').read_text(),'preserve')
             self.assertEqual(list(output.glob('unity-ci-owned-*')),[])
@@ -134,6 +147,32 @@ class RunnerTests(unittest.TestCase):
             evidence['_stdout'] = (output / 'editor.stdout.log').read_text()
             evidence['_stderr'] = (output / 'editor.stderr.log').read_text()
             return code, evidence
+    def test_launch_error_is_not_an_observed_test_failure(self):
+        code, evidence = self.run_fake('launch-error')
+        self.assertEqual(code, 2)
+        self.assertEqual(evidence['status'], 'BLOCKED_NOT_RUN')
+        self.assertEqual(evidence['observation'], 'not_observed')
+        self.assertFalse(evidence['editor_test_process_started'])
+
+    def test_timeout_after_launch_is_failure_with_logs(self):
+        code, evidence = self.run_fake('timeout')
+        self.assertEqual(code, 1)
+        self.assertEqual(evidence['status'], 'FAIL')
+        self.assertTrue(evidence['editor_test_process_started'])
+        self.assertIn('editor.log', evidence['artifact_hashes'])
+
+    def test_malformed_nunit_is_failure_with_evidence(self):
+        code, evidence = self.run_fake('malformed-results')
+        self.assertEqual(code, 1)
+        self.assertEqual(evidence['status'], 'FAIL')
+        self.assertIn('results.xml', evidence['artifact_hashes'])
+    def test_assertion_failure_retains_nunit_and_package_lock(self):
+        code, evidence = self.run_fake('assertion-fail')
+        self.assertEqual(code, 1)
+        self.assertEqual(evidence['status'], 'FAIL')
+        self.assertEqual(evidence['observation'], 'observed')
+        self.assertIn('results.xml', evidence['artifact_hashes'])
+        self.assertIn('packages-lock.json', evidence['artifact_hashes'])
     def test_source_mutation_revokes_otherwise_passing_execution(self):
         code,evidence=self.run_fake('source-mutation')
         self.assertEqual(code,1);self.assertEqual(evidence['status'],'FAIL')

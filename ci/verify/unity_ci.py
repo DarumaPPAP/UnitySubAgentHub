@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shutil
 import subprocess
@@ -17,6 +18,30 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX = ROOT / 'ci/unity-matrix.yaml'  # JSON is a YAML 1.2 subset.
+
+def find_editor(version, editor=None, editor_root=None, system=None):
+    """Select only the exact installation; a broken explicit override fails closed."""
+    system = system or platform.system()
+    if system not in {'Windows', 'Linux'}:
+        raise RuntimeError('Supported Unity CI hosts are Windows and Linux; observed: ' + system)
+    direct = editor or os.getenv('UNITY_EDITOR')
+    configured_root = editor_root or os.getenv('UNITY_EDITOR_ROOT')
+    name = 'Unity.exe' if system == 'Windows' else 'Unity'
+    if direct:
+        candidates = [Path(direct).expanduser()]
+    else:
+        if configured_root:
+            roots = [Path(configured_root).expanduser()]
+        elif system == 'Windows':
+            roots = [Path(os.getenv('ProgramFiles', 'C:/Program Files')) / 'Unity/Hub/Editor']
+        else:
+            roots = [Path('/opt/unity'), Path.home() / 'Unity/Hub/Editor']
+        candidates = [root / version / 'Editor' / name for root in roots]
+    for candidate in candidates:
+        if candidate.is_file() and (system == 'Windows' or os.access(candidate, os.X_OK)):
+            return candidate.resolve()
+    raise RuntimeError('Exact executable Editor unavailable; configure --editor / UNITY_EDITOR or '
+                       '--editor-root / UNITY_EDITOR_ROOT. Checked: ' + ', '.join(map(str, candidates)))
 
 def fetch(url):
     with urllib.request.urlopen(url, timeout=60) as response:
@@ -114,7 +139,7 @@ def stage_artist_tests(package_root, project):
                           'sha256': hashlib.sha256(test.read_bytes()).hexdigest()})
     (destination / 'CiArtistPackageTests.asmdef').write_text(json.dumps({
         'name': 'UnityCi.ArtistPackage.Tests', 'references': ['DarumaPPAP.UnityArtist.Editor'],
-        'includePlatforms': ['Editor'], 'optionalUnityReferences': ['TestAssemblies']}))
+        'includePlatforms': ['Editor'], 'optionalUnityReferences': ['TestAssemblies']}), encoding='utf-8')
     return inventory
 
 def download_editor(release, target):
@@ -148,7 +173,7 @@ def confined_source(root, path):
 def prepare_paths(config, fixture, requested_output):
     """Read-only preflight; reject all overlapping paths before writing anything."""
     source = confined_source(ROOT, ROOT / fixture['project'])
-    manifest = json.loads(confined_source(ROOT, source / 'Packages/manifest.json').read_text())
+    manifest = json.loads(confined_source(ROOT, source / 'Packages/manifest.json').read_text(encoding='utf-8'))
     local = {}
     protected = []
     for row in config['fixtures']:
@@ -156,7 +181,7 @@ def prepare_paths(config, fixture, requested_output):
         protected.append(candidate)
         path = confined_source(ROOT, candidate / 'Packages/manifest.json')
         if path.is_file():
-            dependencies = json.loads(path.read_text())['dependencies']
+            dependencies = json.loads(path.read_text(encoding='utf-8'))['dependencies']
             for package, value in dependencies.items():
                 if value.startswith('file:'):
                     target = confined_source(ROOT, candidate / 'Packages' / value[5:])
@@ -222,7 +247,7 @@ def commit_identity():
 
 
 def run(args):
-    config = json.loads(confined_source(ROOT, MATRIX).read_text())
+    config = json.loads(confined_source(ROOT, MATRIX).read_text(encoding='utf-8'))
     fixture = next(row for row in config['fixtures'] if row['id'] == args.fixture)
     source, manifest, local_inputs, output, initial_inputs = prepare_paths(config, fixture, args.output)
     output.mkdir(parents=True, exist_ok=True)
@@ -234,7 +259,8 @@ def run(args):
     evidence = dict(status='BLOCKED_NOT_RUN', observation='not_observed', fixture=fixture['id'],
                     project=fixture['project'], pipeline=fixture['pipeline'],
                     requested_editor=fixture['editor'], packages={}, srp_package=fixture.get('srp_package'),
-                    package_policy=config['package_policy'], run_id=os.getenv('GITHUB_RUN_ID', 'local'),
+                    package_policy=config['package_policy'], host_platform=platform.system(),
+                    editor_test_process_started=False, run_id=os.getenv('GITHUB_RUN_ID', 'local'),
                     run_attempt=os.getenv('GITHUB_RUN_ATTEMPT', '1'), reason='Editor not run')
     evidence['input_hashes'] = initial_inputs
     evidence['source_identity'] = commit_identity()
@@ -247,23 +273,30 @@ def run(args):
         if release:
             evidence['archive_release'] = release
         evidence['packages'] = manifest['dependencies'].copy()
-        (output / 'requested-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+        (output / 'requested-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
         if fixture.get('version_provenance'):
             evidence['version_provenance'] = fixture['version_provenance']
         if os.getenv('UNITY_LICENSE_READY') != 'true':
             raise RuntimeError('Prelicensed runner required: set UNITY_LICENSE_READY=true only after licensing')
         if fixture.get('requires_graphics') and os.getenv('UNITY_GRAPHICS_READY') != 'true':
             raise RuntimeError('Graphics smoke requires provisioned GPU/display: UNITY_GRAPHICS_READY=true')
-        executable = os.getenv('UNITY_EDITOR', '')
-        if not executable:
-            executable = str(Path(os.getenv('UNITY_EDITOR_ROOT', '/opt/unity')) / version / 'Editor/Unity')
-        editor = Path(executable)
-        if not editor.is_file() and release and os.getenv('UNITY_ALLOW_EDITOR_DOWNLOAD') == 'true':
-            editor = download_editor(release, Path(os.getenv('RUNNER_TEMP', '/tmp')) / ('unity-ci-' + version))
-        if not editor.is_file():
-            raise RuntimeError('Exact Editor unavailable; configure UNITY_EDITOR_ROOT or direct UNITY_EDITOR')
-        measured = subprocess.run([str(editor), '-version'], capture_output=True, text=True, timeout=60)
-        (output / 'editor-version.txt').write_text(measured.stdout + measured.stderr)
+        try:
+            editor = find_editor(version, getattr(args, 'editor', None), getattr(args, 'editor_root', None))
+        except RuntimeError:
+            # P7 archive/download policy is Linux-only. Never extract it on Windows,
+            # and never silently replace an explicitly targeted executable.
+            if (release and platform.system() == 'Linux'
+                    and not (getattr(args, 'editor', None) or os.getenv('UNITY_EDITOR'))
+                    and not getattr(args, 'editor_root', None)
+                    and os.getenv('UNITY_ALLOW_EDITOR_DOWNLOAD') == 'true'):
+                editor = download_editor(release, Path(os.getenv('RUNNER_TEMP') or tempfile.gettempdir())
+                                         / ('unity-ci-' + version))
+            else:
+                raise
+        evidence['editor_path'] = str(editor)
+        measured = subprocess.run([str(editor), '-version'], capture_output=True, text=True,
+                                  encoding='utf-8', errors='replace', timeout=60)
+        (output / 'editor-version.txt').write_text(measured.stdout + measured.stderr, encoding='utf-8')
         if measured.returncode or not re.search(r'(?<![\w.])' + re.escape(version) + r'(?![\w.])', measured.stdout):
             raise RuntimeError('Installed Editor version does not match requested exact version')
         evidence['observed_editor'] = version
@@ -287,11 +320,11 @@ def run(args):
                 if not target.is_dir():
                     raise RuntimeError('Missing local package: ' + package)
                 local_packages[package] = target
-                package_metadata = json.loads((target / 'package.json').read_text())
+                package_metadata = json.loads((target / 'package.json').read_text(encoding='utf-8'))
                 if package_metadata.get('name') != package or not package_metadata.get('version'):
                     raise RuntimeError('Local package identity/version missing: ' + package)
                 evidence.setdefault('local_package_versions', {})[package] = package_metadata['version']
-                manifest['dependencies'][package] = 'file:' + str(target)
+                manifest['dependencies'][package] = 'file:' + target.as_posix()
         if fixture.get('scope') == 'full':
             artist = 'com.darumappap.artist-subagent'
             if artist not in local_packages:
@@ -307,9 +340,9 @@ def run(args):
             manifest['dependencies'][srp] = selected
             evidence['packages'][srp] = selected
             (output / 'srp-selection.json').write_text(json.dumps({'package': srp, 'version': selected,
-                'source': 'https://packages.unity.com/' + srp, 'metadata': metadata['versions'][selected]}, indent=2))
-        (project / 'Packages/manifest.json').write_text(json.dumps(manifest, indent=2))
-        (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + version + '\n')
+                'source': 'https://packages.unity.com/' + srp, 'metadata': metadata['versions'][selected]}, indent=2), encoding='utf-8')
+        (project / 'Packages/manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+        (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + version + '\n', encoding='utf-8')
         results, log = output / 'results.xml', output / 'editor.log'
         command = [str(editor), '-batchmode', '-projectPath', str(project), '-runTests',
                    '-testPlatform', 'EditMode', '-testResults', str(results), '-logFile', str(log)]
@@ -317,13 +350,19 @@ def run(args):
             command.insert(2, '-nographics')
         if fixture.get('test_filter'):
             command.extend(['-testFilter', fixture['test_filter']])
-        evidence['status'] = 'FAIL'
-        evidence['observation'] = 'observed'
         process_env = dict(os.environ, UNITY_CI_ARTIFACTS=str(output))
-        with (output / 'editor.stdout.log').open('w') as stdout, (output / 'editor.stderr.log').open('w') as stderr:
-            completed = subprocess.run(command, stdout=stdout, stderr=stderr, env=process_env, timeout=3600)
+        with (output / 'editor.stdout.log').open('w', encoding='utf-8') as stdout, (output / 'editor.stderr.log').open('w', encoding='utf-8') as stderr:
+            try:
+                completed = subprocess.run(command, stdout=stdout, stderr=stderr, env=process_env,
+                                           timeout=getattr(args, 'timeout', 3600))
+            except subprocess.TimeoutExpired:
+                evidence['editor_test_process_started'] = True
+                evidence['status'], evidence['observation'] = 'FAIL', 'observed'
+                raise
+        evidence['editor_test_process_started'] = True
+        evidence['status'], evidence['observation'] = 'FAIL', 'observed'
         evidence['editor_exit_code'] = completed.returncode
-        diagnostic_logs = ''.join((output / name).read_text(errors='replace')
+        diagnostic_logs = ''.join((output / name).read_text(encoding='utf-8-sig', errors='replace')
                                   for name in ('editor.log', 'editor.stdout.log', 'editor.stderr.log')
                                   if (output / name).exists())
         if 'UNITY_CI_GRAPHICS_UNAVAILABLE' in diagnostic_logs:
@@ -331,8 +370,7 @@ def run(args):
             raise RuntimeError('Measured Editor graphics device unavailable; see Editor logs')
         if completed.returncode:
             # Unity license faults mean no test execution, not an assertion failure.
-            contents = log.read_text(errors='replace') if log.exists() else ''
-            if not results.exists() and re.search(r'(?i)(no valid license|failed to activate|licensing.*(failed|error))', contents):
+            if not results.exists() and re.search(r'(?i)(no valid license|failed to activate|licensing.*(failed|error))', diagnostic_logs):
                 evidence['status'] = 'BLOCKED_NOT_RUN'
                 evidence['observation'] = 'not_observed'
                 raise RuntimeError('Editor licensing unavailable; see editor.log')
@@ -344,7 +382,7 @@ def run(args):
         if not lock.is_file():
             raise ValueError('Resolved package lock missing')
         shutil.copy2(lock, output / 'packages-lock.json')
-        evidence['resolved_packages'] = json.loads(lock.read_text())['dependencies']
+        evidence['resolved_packages'] = json.loads(lock.read_text(encoding='utf-8'))['dependencies']
         for package, requested in manifest['dependencies'].items():
             resolved = evidence['resolved_packages'].get(package, {}).get('version')
             if not resolved or (not requested.startswith('file:') and resolved != requested):
@@ -354,7 +392,7 @@ def run(args):
             if not artifact.is_file() or artifact.stat().st_size == 0:
                 raise ValueError('Required smoke artifact missing: ' + name)
         if fixture.get('requires_graphics'):
-            graphics = json.loads((output / 'graphics-device.json').read_text())
+            graphics = json.loads((output / 'graphics-device.json').read_text(encoding='utf-8'))
             if graphics.get('deviceType') == 'Null':
                 evidence['status'], evidence['observation'] = 'BLOCKED_NOT_RUN', 'not_observed'
                 raise RuntimeError('Measured graphics device unavailable in readback metadata')
@@ -365,7 +403,7 @@ def run(args):
                 raise ValueError('Render smoke screenshot is not a PNG')
             evidence['graphics_observation'] = graphics
         evidence['status'], evidence['reason'], code = 'PASS', 'Nonempty EditMode tests passed', 0
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, RuntimeError, ET.ParseError, KeyError, TypeError, subprocess.SubprocessError) as error:
         evidence['reason'] = str(error)
         code = 2 if evidence['status'] == 'BLOCKED_NOT_RUN' else 1
     finally:
@@ -385,26 +423,42 @@ def run(args):
         if workspace is not None:
             workspace.cleanup()
         if not (output / 'editor.log').exists():
-            (output / 'editor.log').write_text('BLOCKED_NOT_RUN: ' + evidence['reason'] + '\n')
+            (output / 'editor.log').write_text(evidence['status'] + ': ' + evidence['reason'] + '\n', encoding='utf-8')
         for name in ('editor.stdout.log', 'editor.stderr.log'):
             if not (output / name).exists():
-                (output / name).write_text('BLOCKED_NOT_RUN: no Editor test process executed; ' + evidence['reason'] + '\n')
+                (output / name).write_text('BLOCKED_NOT_RUN: no Editor test process executed; ' + evidence['reason'] + '\n', encoding='utf-8')
         evidence['artifact_hashes'] = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                                       for path in output.iterdir() if path.is_file()}
-        (output / 'evidence.json').write_text(json.dumps(evidence, indent=2) + '\n')
+        (output / 'evidence.json').write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
         summary = os.getenv('GITHUB_STEP_SUMMARY')
         if summary:
-            with open(summary, 'a') as stream:
+            with open(summary, 'a', encoding='utf-8') as stream:
                 stream.write(f"Unity {fixture['id']}: **{evidence['status']}** — {evidence['reason']}\n")
         print(f"{fixture['id']}: {evidence['status']} ({evidence['reason']})")
     return code
 
-if __name__ == '__main__':
+def main(argv=None):
+    # Redirected Windows consoles may use a legacy code page. Diagnostics must
+    # never change a FAIL exit into argparse's BLOCKED/invalid-input exit.
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(errors='backslashreplace')
     parser = argparse.ArgumentParser()
     parser.add_argument('--fixture', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--canary', action='store_true')
+    parser.add_argument('--editor', help='Direct Unity.exe (Windows) or Unity (Linux); overrides UNITY_EDITOR')
+    parser.add_argument('--editor-root', help='Directory containing <exact-version>/Editor/Unity[.exe]')
+    parser.add_argument('--timeout', type=int, default=3600, help='Editor test process timeout in seconds')
+    args = parser.parse_args(argv)
+    if args.timeout <= 0:
+        parser.error('--timeout must be positive')
+    if args.fixture not in {row['id'] for row in json.loads(MATRIX.read_text(encoding='utf-8'))['fixtures']}:
+        parser.error('Unknown fixture: ' + args.fixture)
     try:
-        sys.exit(run(parser.parse_args()))
+        return run(args)
     except (OSError, ValueError) as error:
         parser.error('Unsafe or invalid input/output paths: ' + str(error))
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -32,6 +32,7 @@ Artist backend implementationは移行上このRepositoryに同居していま�
 - [ArtistSubAgent Specification](architecture/artist-subagent-spec.md)
 - [Unity API Compatibility](references/unity-api-compatibility.md)
 - [Compatibility Tests](../ci/compatibility/README.md)
+- [Unity CI Windows / Linux 実行手順（日本語）](../ci/README.md)
 
 ## Historical / migration records
 

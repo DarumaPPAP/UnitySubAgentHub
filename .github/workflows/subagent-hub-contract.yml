@@ -57,7 +57,7 @@ jobs:
       - name: Validate Unity CI fixture ownership (static only)
         run: python ci/verify/validate_unity_fixtures.py
       - name: Test Unity resolver and honest evidence state machine
-        run: python -m unittest discover -s ci/verify -p 'test_unity_ci.py' -v
+        run: python -m unittest discover -s ci/verify -p 'test_unity_ci*.py' -v
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "8.0.x"

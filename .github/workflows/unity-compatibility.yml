@@ -25,7 +25,7 @@ jobs:
       - name: Validate migrated fixture structure (static only)
         run: python ci/verify/validate_unity_fixtures.py
       - name: Test resolver and evidence rejection
-        run: python -m unittest discover -s ci/verify -p 'test_unity_ci.py' -v
+        run: python -m unittest discover -s ci/verify -p 'test_unity_ci*.py' -v
       - name: Select fixtures and detect relevant changes inside job
         id: matrix
         env:
@@ -49,10 +49,36 @@ jobs:
               with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
                   stream.write('Unity Editor: NOT_APPLICABLE (no related changes); host foundation validated.\n')
           PYTHON
+      - name: Record missing runner license as BLOCKED_NOT_RUN (never Editor PASS)
+        if: steps.matrix.outputs.relevant == 'true' && vars.UNITY_LICENSE_READY != 'true'
+        env:
+          UNITY_LICENSE_READY: 'false'
+        run: |
+          python - <<'PYTHON'
+          import json, subprocess, sys
+          from pathlib import Path
+          config = json.loads(Path('ci/unity-matrix.yaml').read_text(encoding='utf-8'))
+          for row in config['fixtures']:
+              if row['id'] not in {'canonical-full', 'minimal-6000.3', 'minimal-6000.6'}:
+                  continue
+              output = Path('artifacts') / row['id']
+              code = subprocess.call([sys.executable, 'ci/verify/unity_ci.py', '--fixture', row['id'], '--output', str(output)])
+              evidence = json.loads((output / 'evidence.json').read_text(encoding='utf-8'))
+              if code != 2 or evidence['status'] != 'BLOCKED_NOT_RUN' or evidence['observation'] != 'not_observed':
+                  raise SystemExit('Unprovisioned runner must record BLOCKED_NOT_RUN, never PASS or FAIL')
+          PYTHON
+      - name: Upload unprovisioned runner evidence
+        if: always() && steps.matrix.outputs.relevant == 'true' && vars.UNITY_LICENSE_READY != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-compatibility-blocked-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
   editor:
     name: Unity compatibility (${{ matrix.fixture }})
     needs: host-foundation
-    if: needs.host-foundation.outputs.relevant == 'true'
+    if: needs.host-foundation.outputs.relevant == 'true' && vars.UNITY_LICENSE_READY == 'true'
     runs-on: ${{ fromJSON(vars.UNITY_CI_RUNNER || '["ubuntu-latest"]') }}
     timeout-minutes: 90
     strategy:
